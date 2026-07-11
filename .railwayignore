@@ -1,0 +1,6 @@
+node_modules/
+packages/3d-site/public/
+packages/inner-site/build/
+.git/
+.cursor/
+*.log
