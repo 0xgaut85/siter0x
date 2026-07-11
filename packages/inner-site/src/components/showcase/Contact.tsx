@@ -156,8 +156,9 @@ const Developers: React.FC<DevelopersProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Robinhood Chain is too new for any managed facilitator (Coinbase CDP,
-                    PayAI, etc.), so r0x runs its own using{' '}
+                    r0x is the first native x402 facilitator on Robinhood Chain — no
+                    managed facilitator supports this chain yet, so r0x built its own
+                    using{' '}
                     <code style={styles.inlineCode}>@x402/core</code>,{' '}
                     <code style={styles.inlineCode}>@x402/evm</code> and{' '}
                     <code style={styles.inlineCode}>@x402/express</code>. A dedicated gas
@@ -334,7 +335,7 @@ const tx = await client.skills.tx('0x...');`}
                 <br />
                 <p>
                     No private key is needed upfront. On first use the agent
-                    calls <code style={styles.inlineCode}>pinion_setup</code> to
+                    calls <code style={styles.inlineCode}>r0x_setup</code> to
                     either import an existing wallet or generate a fresh one.
                     After setup, all nine tools are available: balance, tx, price,
                     wallet, chat, send, fund, broadcast and spend_limit.
@@ -377,17 +378,10 @@ const tx = await client.skills.tx('0x...');`}
                             <p>@projectr0x</p>
                         </div>
                     </a>
-                    <a
-                        href="https://www.x402scan.com/server/49a688db-0234-4609-948c-c3eee1719e5d"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={styles.socialLink}
-                    >
-                        <div style={styles.socialCard}>
-                            <h3>x402scan Server</h3>
-                            <p>View live endpoint stats</p>
-                        </div>
-                    </a>
+                    <div style={{ ...styles.socialCard, cursor: 'default' }}>
+                        <h3>x402 Server</h3>
+                        <p>Endpoint stats coming soon</p>
+                    </div>
                     <a
                         href="https://github.com/nhevers/project-r0x"
                         target="_blank"

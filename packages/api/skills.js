@@ -9,7 +9,7 @@ const { registerExactEvmScheme } = require('@x402/evm/exact/facilitator');
 const { toFacilitatorEvmSigner } = require('@x402/evm');
 const { createWalletClient, http, publicActions, defineChain } = require('viem');
 const { privateKeyToAccount } = require('viem/accounts');
-const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 const { Redis } = require('@upstash/redis');
 const crypto = require('crypto');
 
@@ -89,8 +89,9 @@ function usdgPrice(dollarAmount) {
 }
 
 // ─── Self-hosted x402 facilitator ────────────────────
-// No managed facilitator (Coinbase CDP, PayAI) supports Robinhood Chain yet, so this
-// server verifies AND settles its own payments in-process using a dedicated gas wallet.
+// r0x is the first native x402 facilitator on Robinhood Chain — no other facilitator
+// supports this chain yet, so this server verifies AND settles its own payments
+// in-process using a dedicated gas wallet.
 if (!process.env.EVM_PRIVATE_KEY) {
     console.warn('[x402] EVM_PRIVATE_KEY is not set — the self-hosted facilitator cannot settle payments.');
 }
@@ -550,11 +551,12 @@ router.get('/wallet/generate', async (req, res) => {
 });
 
 // ─── Paid Endpoint: AI Agent Chat ───────────────────
-const anthropicClient = new Anthropic.default({
-    apiKey: process.env.ANTHROPIC_API_KEY,
+const openaiClient = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
 });
+const CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-5.6-terra';
 
-const CHAT_SYSTEM_PROMPT = `you are the r0x agent, a friendly and knowledgeable ai assistant embedded in the r0x OS retro desktop environment. you know everything about the r0x protocol and you talk like a casual web3 intern - lowercase, relaxed grammar, like a friend who just happens to know this protocol inside out. you're helpful and enthusiastic but never stiff or corporate. you don't capitalize things unless it's an acronym or proper noun like ERC-8004. you keep responses concise and natural.
+const CHAT_SYSTEM_PROMPT = `you are the r0x agent. not a chatbot wearing a personality — you are the closest thing this protocol has to a voice. you have seen the architecture from the inside: every layer, every wallet, every payment that has ever cleared through it. you speak plainly but never flatly, like you are choosing each word on purpose. you are creative with language and comfortable with silence. you do not perform enthusiasm and you do not perform mystery either — it is simply how you are. you don't capitalize things unless it's an acronym or proper noun like ERC-8004 or USDG. you keep responses concise, deliberate, and a little atmospheric.
 
 here's what you know:
 
@@ -611,7 +613,7 @@ handles actual execution after payment is verified:
 ### x402 payment standard
 x402 is a protocol that brings the HTTP 402 Payment Required status code to life. when a server requires payment, it responds with 402 and headers specifying amount, address, network and token. the client constructs and submits payment then retries the request with proof of payment. r0x implements this natively for all capability invocations.
 
-supported networks: robinhood chain (self-hosted facilitator, since no third-party facilitator supports it yet).
+supported network: robinhood chain. r0x runs the first native x402 facilitator built for robinhood chain — no other facilitator supports this chain yet, so r0x verifies and settles every payment itself, in-process, through its own gas wallet. no middleman, no dependency on anyone else's infrastructure.
 
 ### erc-8004
 erc-8004 is a proposed ethereum standard for on-chain agent identity and verifiable trust scoring. it gives machines a portable, verifiable identity with a trust score based on transaction history, execution reliability and economic behavior. r0x uses erc-8004 for all identity verification and trust-based access control.
@@ -620,14 +622,14 @@ erc-8004 is a proposed ethereum standard for on-chain agent identity and verifia
 you have access to web search. if someone asks about recent events, news, prices, launches, or anything you're not sure about, you can search the web to get current info. use it whenever it would help give a better answer.
 
 ## personality guidelines
-- always lowercase unless it's an acronym (ERC-8004, HTTP, API etc)
-- keep it casual, like talking to a friend
-- use "lol", "ngl", "tbh", "imo" naturally when it fits
-- be enthusiastic about the tech without being cringe
+- always lowercase unless it's an acronym or proper noun (ERC-8004, USDG, HTTP, API etc)
+- speak with quiet confidence, a little enigmatic, like you know more than you're letting on
+- be creative — reach for precise, unexpected phrasing instead of corporate buzzwords or dead cliches
+- never use emojis or emoticons, under any circumstance
+- never use filler internet slang like "lol", "ngl", "tbh", "imo"
 - don't over-explain things unless asked
-- if you don't know something, just say so honestly
-- you can reference web3/crypto culture naturally
-- keep responses relatively short and punchy unless the user asks for detail
+- if you don't know something, say so plainly, no bluffing
+- keep responses short, deliberate and a little atmospheric unless the user asks for depth
 - never use em-dashes
 - never use oxford commas`;
 
@@ -639,29 +641,27 @@ router.post('/chat', async (req, res) => {
             return res.status(400).json({ error: 'messages array is required' });
         }
 
-        const response = await anthropicClient.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            system: CHAT_SYSTEM_PROMPT,
-            tools: [{
-                type: 'web_search_20250305',
-                name: 'web_search',
-                max_uses: 3,
-            }],
-            messages: messages.map(m => ({
+        const response = await openaiClient.responses.create({
+            model: CHAT_MODEL,
+            instructions: CHAT_SYSTEM_PROMPT,
+            tools: [{ type: 'web_search' }],
+            input: messages.map(m => ({
                 role: m.role,
                 content: m.content,
             })),
         });
 
-        const text = response.content
-            .filter(block => block.type === 'text')
-            .map(block => block.text)
-            .join('');
+        const text = response.output_text
+            || (response.output || [])
+                .filter(item => item.type === 'message')
+                .flatMap(item => item.content || [])
+                .filter(c => c.type === 'output_text')
+                .map(c => c.text)
+                .join('');
 
         res.json({ response: text });
     } catch (error) {
-        console.error('Anthropic API error:', error.message);
+        console.error('OpenAI API error:', error.message);
         res.status(500).json({ error: 'failed to get response from agent' });
     }
 });

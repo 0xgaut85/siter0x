@@ -25,7 +25,7 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
         {
             role: 'assistant',
             content:
-                'hey! im the r0x agent. ask me anything about the protocol, how x402 works, the skill catalog, erc-8004 identity stuff... whatever you wanna know 🤙',
+                'im the r0x agent. ask me anything about the protocol, how x402 works, the skill catalog, erc-8004 identity stuff... whatever you want to know.',
         },
     ]);
     const [input, setInput] = useState('');

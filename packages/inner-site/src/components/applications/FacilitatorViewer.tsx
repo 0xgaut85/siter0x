@@ -33,9 +33,10 @@ const FacilitatorViewer: React.FC<FacilitatorViewerProps> = (props) => {
 
                 <div style={styles.body}>
                     <p style={styles.paragraph}>
-                        r0x runs its own <b style={styles.bold}>self-hosted x402 facilitator</b> — no
-                        third-party facilitator (Coinbase CDP, PayAI) supports Robinhood Chain yet, so
-                        r0x verifies and settles every payment itself.
+                        r0x runs the <b style={styles.bold}>first native x402 facilitator on
+                        Robinhood Chain</b>. no other facilitator supports this chain yet, so
+                        r0x verifies and settles every payment itself, in-process, with its own
+                        gas wallet.
                     </p>
 
                     <div style={styles.grid}>
@@ -85,6 +86,34 @@ const FacilitatorViewer: React.FC<FacilitatorViewerProps> = (props) => {
                             </span>
                         </div>
                     </div>
+
+                    <p style={styles.sectionTitle}>HOW TO USE IT</p>
+                    <p style={styles.paragraph}>
+                        Any x402 client can call an r0x skill directly — sign an EIP-3009{' '}
+                        <code style={styles.code}>TransferWithAuthorization</code> for USDG
+                        and retry with a <code style={styles.code}>PAYMENT-SIGNATURE</code>{' '}
+                        header. No API key, no onboarding, no permission needed.
+                    </p>
+                    <pre style={styles.terminal}>
+{`PAYER_PRIVATE_KEY=0xyour-wallet-key \\
+  node packages/api/scripts/test-transaction.js \\
+  https://projectr0x.dev/skill/price/ETH`}
+                    </pre>
+                    <p style={styles.paragraph}>
+                        That script is a real, working reference client — it completes a
+                        live payment end to end against this facilitator. Full docs and
+                        source live in the Developers section of{' '}
+                        <b style={styles.bold}>r0x Explorer</b>, and on{' '}
+                        <a
+                            href="https://github.com/nhevers/project-r0x"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={styles.link}
+                        >
+                            GitHub
+                        </a>
+                        .
+                    </p>
                 </div>
             </div>
         </Window>
@@ -193,6 +222,22 @@ const styles: StyleSheetCSS = {
         color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 11,
+    },
+    terminal: {
+        display: 'block',
+        backgroundColor: '#050505',
+        border: '1px solid #222',
+        borderRadius: 4,
+        padding: '10px 12px',
+        color: '#00ff88',
+        fontFamily: 'monospace',
+        fontSize: 10,
+        lineHeight: '15px',
+        whiteSpace: 'pre-wrap',
+        marginBottom: 14,
+    },
+    link: {
+        color: '#CEF506',
     },
 };
 
