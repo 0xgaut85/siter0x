@@ -23,8 +23,8 @@ const SkillsPage: React.FC<SkillsPageProps> = (props) => {
                 <p>
                     r0x packages every capability as a skill: a plain HTTP
                     endpoint that agents can discover, price-check and invoke
-                    programmatically. No SDK is required to call a skill —
-                    any HTTP client that can sign an EIP-3009 authorization
+                    programmatically. No SDK is required to call a skill.
+                    Any HTTP client that can sign an EIP-3009 authorization
                     works.
                 </p>
             </div>
@@ -88,7 +88,7 @@ const SkillsPage: React.FC<SkillsPageProps> = (props) => {
             <div className="text-block">
                 <p style={{ opacity: 0.7, fontSize: 12 }}>
                     Note: <b>Trade</b> (<code style={styles.skillEndpoint}>POST /skill/trade</code>) exists but
-                    is temporarily disabled and not paywalled — no DEX aggregator supports Robinhood Chain
+                    is temporarily disabled and not paywalled, since no DEX aggregator supports Robinhood Chain
                     (chain ID 4663) yet.
                 </p>
             </div>

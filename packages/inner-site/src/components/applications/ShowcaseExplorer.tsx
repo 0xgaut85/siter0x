@@ -23,8 +23,8 @@ const ShowcaseExplorer: React.FC<ShowcaseExplorerProps> = (props) => {
             left={56}
             width={initWidth}
             height={initHeight}
-            windowTitle="r0x OS - Protocol Explorer"
-            windowBarIcon="windowExplorerIcon"
+            windowTitle="r0x OS - r0x Explorer"
+            windowBarIcon="windowR0xExplorerIcon"
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}

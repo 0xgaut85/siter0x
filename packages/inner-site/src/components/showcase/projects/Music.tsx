@@ -26,7 +26,7 @@ const X402Page: React.FC<X402PageProps> = (props) => {
                     it includes structured payment requirements. The client
                     signs a USDG transfer and retries with proof attached.
                     No accounts, no API keys. r0x runs x402 protocol v2 with a
-                    self-hosted facilitator — no third-party facilitator
+                    self-hosted facilitator, since no third-party facilitator
                     supports Robinhood Chain yet.
                 </p>
             </div>
@@ -197,7 +197,7 @@ const X402Page: React.FC<X402PageProps> = (props) => {
                 <br />
                 <pre style={styles.codeBlock}>
 {`const { paymentMiddleware } = require('@x402/express');
-// resourceServer wraps a self-hosted x402Facilitator — see the
+// resourceServer wraps a self-hosted x402Facilitator, see the
 // "Server: Self-Hosted Facilitator" section on the Developers page.
 
 app.use(

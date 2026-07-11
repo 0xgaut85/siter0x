@@ -32,7 +32,7 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 <br />
                 <p>
                     The server runs a <b>self-hosted facilitator</b> using{' '}
-                    <b>@x402/express</b> middleware (x402 protocol v2) — no third-party
+                    <b>@x402/express</b> middleware (x402 protocol v2). No third-party
                     facilitator supports Robinhood Chain yet, so r0x verifies and settles
                     its own payments in-process. Clients receive a{' '}
                     <code style={styles.inlineCode}>402 Payment Required</code>{' '}
@@ -99,12 +99,12 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 <p>
                     Anyone can complete a live payment against r0x's
                     facilitator right now. All you need is a wallet holding a
-                    small amount of <b>USDG on Robinhood Chain</b> — get some
+                    small amount of <b>USDG on Robinhood Chain</b>: get some
                     via{' '}
                     <a href="https://across.to" target="_blank" rel="noopener noreferrer" style={styles.link}>
                         Across
                     </a>{' '}
-                    (bridges USDC from 13 chains and delivers USDG directly)
+                    (bridges funds from 13 chains and delivers USDG directly)
                     or see the{' '}
                     <a href="https://docs.robinhood.com/chain/bridging/" target="_blank" rel="noopener noreferrer" style={styles.link}>
                         full bridging options
@@ -115,7 +115,7 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                     The script below signs a real EIP-3009{' '}
                     <code style={styles.inlineCode}>TransferWithAuthorization</code>{' '}
                     and lets r0x's self-hosted facilitator verify and settle
-                    it on-chain — the exact same flow described above, no
+                    it on-chain, the exact same flow described above, no
                     mocking. It's checked into the repo at{' '}
                     <code style={styles.inlineCode}>packages/api/scripts/test-transaction.js</code>.
                 </p>
@@ -139,7 +139,7 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 <br />
                 <p style={{ opacity: 0.7, fontSize: 12 }}>
                     The script targets <code style={styles.inlineCode}>/skill/price/ETH</code>{' '}
-                    by default (cheapest endpoint to test with, $0.01) — pass
+                    by default (cheapest endpoint to test with, $0.01). Pass
                     any live endpoint URL as the first argument. Source: the
                     same request/sign/retry logic used by the SDK and this
                     site's own wallet integration.
@@ -159,7 +159,7 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                     Robinhood Chain is too new for any managed facilitator (Coinbase CDP,
                     PayAI, etc.), so r0x runs its own using{' '}
                     <code style={styles.inlineCode}>@x402/core</code>,{' '}
-                    <code style={styles.inlineCode}>@x402/evm</code>, and{' '}
+                    <code style={styles.inlineCode}>@x402/evm</code> and{' '}
                     <code style={styles.inlineCode}>@x402/express</code>. A dedicated gas
                     wallet signs and submits settlement transactions directly.
                 </p>
@@ -337,9 +337,9 @@ const tx = await client.skills.tx('0x...');`}
                     calls <code style={styles.inlineCode}>pinion_setup</code> to
                     either import an existing wallet or generate a fresh one.
                     After setup, all nine tools are available: balance, tx, price,
-                    wallet, chat, send, fund, broadcast, and spend_limit.
-                    (<code style={styles.inlineCode}>trade</code> is temporarily disabled —
-                    no DEX aggregator supports Robinhood Chain yet.)
+                    wallet, chat, send, fund, broadcast and spend_limit.
+                    (<code style={styles.inlineCode}>trade</code> is temporarily disabled,
+                    since no DEX aggregator supports Robinhood Chain yet.)
                 </p>
                 <br />
                 <p>
@@ -349,42 +349,6 @@ const tx = await client.skills.tx('0x...');`}
                 <pre style={styles.codeBlock}>
 {`claude mcp add r0x -- npx r0x-os`}
                 </pre>
-            </div>
-
-            {/* STRIPE x402 */}
-            <div style={styles.headerContainer}>
-                <div style={styles.header}>
-                    <div style={styles.headerRow}>
-                        <h2>Stripe x402 — Pay Web2 with Crypto</h2>
-                    </div>
-                </div>
-            </div>
-            <div className="text-block">
-                <p>
-                    Your r0x agent can pay any web2 service that uses{" "}
-                    <a href="https://docs.stripe.com/payments/machine/x402" style={styles.link}>
-                        Stripe x402
-                    </a>{" "}
-                    for machine payments. The SDK auto-detects v1 and v2 x402
-                    transport — no config needed.
-                </p>
-                <br />
-                <pre style={styles.codeBlock}>
-{`const result = await payX402Service(
-  r0x.signer,
-  "https://api.example.com/paid-endpoint",
-  { method: "GET", maxAmount: "100000" }
-);`}
-                </pre>
-                <br />
-                <p>
-                    Note: this is Stripe's own x402 implementation, which
-                    currently only settles in USDC on Base — a limitation of
-                    Stripe's infrastructure, not r0x's. Everything r0x runs
-                    itself settles in USDG on Robinhood Chain. Stripe handles
-                    settlement server-side; no Stripe account is needed on
-                    the agent side.
-                </p>
             </div>
 
             {/* COMMUNITY */}
@@ -432,7 +396,7 @@ const tx = await client.skills.tx('0x...');`}
                     >
                         <div style={styles.socialCard}>
                             <h3>GitHub</h3>
-                            <p>Source code, SDK, and skill API</p>
+                            <p>Source code, SDK and skill API</p>
                         </div>
                     </a>
                 </div>

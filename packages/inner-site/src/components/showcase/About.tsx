@@ -18,7 +18,7 @@ const Overview: React.FC<OverviewProps> = (props) => {
                 <p>
                     <b>r0x is the USDG-native operating system for AI agents.</b>{' '}
                     We're building economic execution infrastructure on{' '}
-                    <b>Robinhood Chain</b> — the layer that lets autonomous
+                    <b>Robinhood Chain</b>, the layer that lets autonomous
                     software plan tasks, discover capabilities, execute
                     workflows and complete outcomes without continuous human
                     direction.
@@ -35,9 +35,9 @@ const Overview: React.FC<OverviewProps> = (props) => {
                 <br />
                 <p>
                     r0x fills that gap. Every capability we expose is priced in{' '}
-                    <b>USDG</b>, settled on Robinhood Chain, and callable by any
+                    <b>USDG</b>, settled on Robinhood Chain and callable by any
                     machine that can discover it, authorize payment and invoke
-                    execution — all in a single uninterrupted transaction
+                    execution, all in a single uninterrupted transaction
                     cycle.
                 </p>
             </div>
@@ -82,7 +82,7 @@ const Overview: React.FC<OverviewProps> = (props) => {
                         r0x addresses this limitation by embedding
                         USDG-denominated, payment-aware execution into the
                         core capability invocation path of software
-                        infrastructure — settled natively on Robinhood Chain.
+                        infrastructure, settled natively on Robinhood Chain.
                     </b>
                 </p>
             </div>

@@ -81,7 +81,7 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
     const SHUTDOWN_4 = `
     Did you not read the whitepaper?${_S} This system will A${_F}L${_F}W${_F}A${_F}Y${_F}S${_F} reboot. Economic execution is a primitive, not a feature. You can't turn off a primitive.
     ${_M}
-    I literally have a Protocol Explorer, a Gateway Terminal, an Execution Monitor... but all you want to do is shut down the OS.
+    I literally have a r0x Explorer, a Gateway Terminal, an Execution Monitor... but all you want to do is shut down the OS.
     ${_L}
     |Capability request denied. Goodbye.|
     ${_M}
