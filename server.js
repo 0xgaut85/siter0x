@@ -55,6 +55,11 @@ app.get('/.well-known/x402', (req, res) => {
             `${R0X_ORIGIN}/skill/wallet/generate`,
             `${R0X_ORIGIN}/skill/chat`,
             `${R0X_ORIGIN}/skill/send`,
+            `${R0X_ORIGIN}/skill/trade`,
+            `${R0X_ORIGIN}/skill/quote/ETH/USDG/0.1`,
+            `${R0X_ORIGIN}/skill/pool/ETH/USDG`,
+            `${R0X_ORIGIN}/skill/yield/usdg`,
+            `${R0X_ORIGIN}/skill/bridge/42161/USDC/100`,
             `${R0X_ORIGIN}/skill/fund/0x0000000000000000000000000000000000000001`,
             `${R0X_ORIGIN}/skill/broadcast`,
             `${R0X_ORIGIN}/skill/unlimited`,
@@ -73,6 +78,11 @@ app.get('/.well-known/x402', (req, res) => {
             '- **Wallet Generation** - Generate a fresh Robinhood Chain keypair\n' +
             '- **AI Chat** - Chat with the r0x Agent ($0.01/message)\n' +
             '- **Send** - Construct unsigned ETH or USDG transfer tx\n' +
+            '- **Trade** - Real Uniswap V2 swap tx (ETH <-> USDG) on Robinhood Chain\n' +
+            '- **Quote** - Live swap price quote, no tx constructed\n' +
+            '- **Pool** - Uniswap V2 pool reserves and implied price\n' +
+            '- **Yield** - Morpho steakUSDG vault APY (powers Robinhood Earn)\n' +
+            '- **Bridge** - Across Protocol quote for bridging onto Robinhood Chain\n' +
             '- **Fund** - Wallet balance and funding instructions\n' +
             '- **Broadcast** - Sign and broadcast a transaction on Robinhood Chain\n' +
             '- **Unlimited** - One-time $100 payment for unlimited access to all skills\n\n' +

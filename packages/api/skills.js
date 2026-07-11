@@ -82,6 +82,16 @@ const USDG_CONTRACT = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
 const USDG_DECIMALS = 6;
 const USDG_EIP712 = { name: 'Global Dollar', version: '1', decimals: USDG_DECIMALS };
 
+// ─── Uniswap V2 on Robinhood Chain — verified on-chain (eth_getCode + live
+// WETH/USDG pool reserves), addresses match Robinhood's official token
+// contracts page and Uniswap's own launch announcement:
+//   WETH/USDG V2 pair holds real liquidity (~32 WETH / ~58k USDG at time of
+//   writing) — confirmed via getPair() + getReserves(), not assumed.
+const WETH_CONTRACT = '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73'; // Robinhood's non-standard WETH (verified name/symbol/decimals on-chain)
+const UNISWAP_V2_ROUTER = '0x89e5DB8B5aA49aA85AC63f691524311AEB649eba';
+const UNISWAP_V2_FACTORY = '0x8bcEaA40B9AcdfAedF85AdF4FF01F5Ad6517937f';
+const SWAP_SLIPPAGE_BPS_DEFAULT = 100n; // 1%
+
 // Helper: build an explicit AssetAmount price for USDG (dollar-string pricing can't be used —
 // ExactEvmScheme's default money conversion only knows well-established chains, not Robinhood Chain yet).
 function usdgPrice(dollarAmount) {
@@ -186,8 +196,31 @@ const paywallRoutes = {
         description: 'Construct an unsigned ETH or USDG transfer transaction on Robinhood Chain',
         mimeType: 'application/json',
     },
-    // NOTE: /trade is intentionally NOT paywalled — no DEX aggregator supports Robinhood
-    // Chain yet, so the endpoint just returns a 501; charging for it would be dishonest.
+    'POST /trade': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Construct a real Uniswap V2 swap transaction (ETH <-> USDG) on Robinhood Chain',
+        mimeType: 'application/json',
+    },
+    'GET /quote/[tokenIn]/[tokenOut]/[amountIn]': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get a live Uniswap swap price quote (ETH <-> USDG) without constructing a transaction',
+        mimeType: 'application/json',
+    },
+    'GET /pool/[tokenA]/[tokenB]': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get Uniswap V2 pool reserves and implied price for a token pair on Robinhood Chain',
+        mimeType: 'application/json',
+    },
+    'GET /yield/usdg': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get the live Morpho steakUSDG vault APY that powers Robinhood Earn',
+        mimeType: 'application/json',
+    },
+    'GET /bridge/[originChain]/[token]/[amount]': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get an Across Protocol bridge quote for moving USDC or WETH onto Robinhood Chain',
+        mimeType: 'application/json',
+    },
     'GET /fund/[address]': {
         accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
         description: 'Get wallet balance and funding instructions for Robinhood Chain',
@@ -368,11 +401,47 @@ router.get('/catalog', (req, res) => {
         {
             endpoint: '/skill/trade',
             method: 'POST',
-            price: 'unavailable',
+            price: '$0.01',
             currency: 'USDG',
             network: network,
-            description: 'Trade endpoint (currently unavailable — no DEX aggregator supports Robinhood Chain yet, returns 501). Not paywalled.',
-            example: 'POST /skill/trade { "src": "USDG", "dst": "ETH", "amount": "10", "from": "0x..." }',
+            description: 'Construct a real Uniswap V2 swap transaction (ETH <-> USDG) on Robinhood Chain. Client signs and broadcasts.',
+            example: 'POST /skill/trade { "tokenIn": "ETH", "tokenOut": "USDG", "amountIn": "0.1", "from": "0x..." }',
+        },
+        {
+            endpoint: '/skill/quote/:tokenIn/:tokenOut/:amountIn',
+            method: 'GET',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'Get a live Uniswap swap price quote (ETH <-> USDG) with no transaction constructed',
+            example: '/skill/quote/ETH/USDG/0.1',
+        },
+        {
+            endpoint: '/skill/pool/:tokenA/:tokenB',
+            method: 'GET',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'Get Uniswap V2 pool reserves and implied price for a token pair on Robinhood Chain',
+            example: '/skill/pool/ETH/USDG',
+        },
+        {
+            endpoint: '/skill/yield/usdg',
+            method: 'GET',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'Get the live Morpho steakUSDG vault APY that powers Robinhood Earn',
+            example: '/skill/yield/usdg',
+        },
+        {
+            endpoint: '/skill/bridge/:originChain/:token/:amount',
+            method: 'GET',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'Get an Across Protocol bridge quote for moving USDC or WETH onto Robinhood Chain',
+            example: '/skill/bridge/42161/USDC/100',
         },
         {
             endpoint: '/skill/fund/:address',
@@ -760,18 +829,358 @@ router.post('/send', async (req, res) => {
     }
 });
 
-// ─── Paid Endpoint: Trade ─────────────────────────────
-// Robinhood Chain launched July 2026 and no DEX aggregator (1inch, 0x, etc.)
-// indexes it yet, so this endpoint is disabled rather than silently returning
-// a broken/misleading transaction. It will be wired up to a real router as
-// soon as one exists for chain 4663.
+// ─── Uniswap V2 helpers (ETH <-> USDG, the only pair with real liquidity) ─
+function padHex(value, bytes = 32) {
+    return BigInt(value).toString(16).padStart(bytes * 2, '0');
+}
+function padAddress(address) {
+    return address.substring(2).toLowerCase().padStart(64, '0');
+}
+function encodeAddressArrayTail(addresses) {
+    // ABI tail for a dynamic address[] param: [length][item0][item1]...
+    // (the head-word "offset" pointing here is computed separately by each caller,
+    // since it depends on how many other params precede this one)
+    const length = padHex(addresses.length, 32);
+    const items = addresses.map(a => padAddress(a)).join('');
+    return length + items;
+}
+
+async function getAmountsOutV2(amountIn, path) {
+    const selector = '0xd06ca61f'; // getAmountsOut(uint256,address[])
+    // 2 head words (amountIn, offset) = 0x40 bytes before the path's tail begins
+    const data = selector + padHex(amountIn, 32) + padHex(0x40, 32) + encodeAddressArrayTail(path);
+    const result = await robinhoodRpc('eth_call', [{ to: UNISWAP_V2_ROUTER, data }, 'latest']);
+    // returns (offset, length, amounts[0], amounts[1]); we only need the last slot
+    const hex = result.slice(2);
+    const lastSlot = hex.slice(-64);
+    return BigInt('0x' + lastSlot);
+}
+
+function applySlippage(amount, slippageBps) {
+    return (amount * (10000n - slippageBps)) / 10000n;
+}
+
+// ─── Paid Endpoint: Trade (real Uniswap V2 swap, ETH <-> USDG) ──────────
+// Uniswap v2/v3/v4 + UniswapX went live on Robinhood Chain at mainnet launch.
+// This uses the V2 router directly (no API key, no third-party dependency) —
+// contract addresses and the WETH/USDG pool were verified on-chain via
+// eth_getCode and getReserves() before wiring this up.
 router.post('/trade', async (req, res) => {
-    res.status(501).json({
-        error: 'Trade is not available yet on Robinhood Chain',
-        reason: 'No DEX aggregator currently supports chain 4663 (Robinhood Chain launched July 1, 2026).',
-        network: 'robinhood-chain',
-        chainId: 4663,
-    });
+    try {
+        const { tokenIn, tokenOut, amountIn, from, slippageBps } = req.body;
+
+        if (!tokenIn || !tokenOut || !amountIn || !from) {
+            return res.status(400).json({ error: 'tokenIn, tokenOut, amountIn, and from (your wallet address) are required' });
+        }
+        if (!/^0x[0-9a-fA-F]{40}$/.test(from)) {
+            return res.status(400).json({ error: 'Invalid from address' });
+        }
+        const parsedAmount = parseFloat(amountIn);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            return res.status(400).json({ error: 'amountIn must be a positive number' });
+        }
+
+        const upperIn = tokenIn.toUpperCase();
+        const upperOut = tokenOut.toUpperCase();
+        const pairKey = [upperIn, upperOut].sort().join('/');
+        if (pairKey !== 'ETH/USDG') {
+            return res.status(400).json({
+                error: `Unsupported pair: ${tokenIn}/${tokenOut}`,
+                hint: 'Only ETH <-> USDG is supported right now (the only Robinhood Chain pool with real liquidity). More pairs land as liquidity deepens.',
+            });
+        }
+
+        const slippage = slippageBps ? BigInt(Math.round(Number(slippageBps))) : SWAP_SLIPPAGE_BPS_DEFAULT;
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200); // 20 minutes
+
+        if (upperIn === 'ETH') {
+            const amountInWei = BigInt(Math.floor(parsedAmount * 1e18));
+            const path = [WETH_CONTRACT, USDG_CONTRACT];
+            const amountOut = await getAmountsOutV2(amountInWei, path);
+            const amountOutMin = applySlippage(amountOut, slippage);
+
+            // swapExactETHForTokens(uint amountOutMin, address[] path, address to, uint deadline)
+            const selector = '0x7ff36ab5';
+            const data = selector
+                + padHex(amountOutMin, 32)
+                + padHex(0x80, 32) // offset to path's tail = 4 head words * 32 bytes
+                + padAddress(from)
+                + padHex(deadline, 32)
+                + encodeAddressArrayTail(path);
+
+            return res.json({
+                tx: { to: UNISWAP_V2_ROUTER, value: '0x' + amountInWei.toString(16), data, chainId: 4663 },
+                quote: {
+                    tokenIn: 'ETH',
+                    tokenOut: 'USDG',
+                    amountIn: parsedAmount.toString(),
+                    estimatedAmountOut: (Number(amountOut) / 10 ** USDG_DECIMALS).toFixed(6),
+                    minimumAmountOut: (Number(amountOutMin) / 10 ** USDG_DECIMALS).toFixed(6),
+                    slippageBps: slippage.toString(),
+                },
+                router: 'Uniswap V2',
+                network: 'robinhood-chain',
+                note: 'Sign this transaction with your private key and broadcast to Robinhood Chain.',
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        // upperIn === 'USDG' -> USDG -> ETH, needs an approval step first
+        const amountInAtomic = BigInt(Math.floor(parsedAmount * 10 ** USDG_DECIMALS));
+        const path = [USDG_CONTRACT, WETH_CONTRACT];
+        const amountOut = await getAmountsOutV2(amountInAtomic, path);
+        const amountOutMin = applySlippage(amountOut, slippage);
+
+        const approveSelector = '0x095ea7b3'; // approve(address,uint256)
+        const approveData = approveSelector + padAddress(UNISWAP_V2_ROUTER) + padHex(amountInAtomic, 32);
+
+        // swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] path, address to, uint deadline)
+        const swapSelector = '0x18cbafe5';
+        const swapData = swapSelector
+            + padHex(amountInAtomic, 32)
+            + padHex(amountOutMin, 32)
+            + padHex(0xa0, 32) // offset to path's tail = 5 head words * 32 bytes
+            + padAddress(from)
+            + padHex(deadline, 32)
+            + encodeAddressArrayTail(path);
+
+        res.json({
+            steps: [
+                {
+                    tx: { to: USDG_CONTRACT, value: '0x0', data: approveData, chainId: 4663 },
+                    note: 'Approve the Uniswap V2 router to spend your USDG (one-time per allowance).',
+                },
+                {
+                    tx: { to: UNISWAP_V2_ROUTER, value: '0x0', data: swapData, chainId: 4663 },
+                    note: 'Execute the swap. Broadcast this only after the approval above confirms.',
+                },
+            ],
+            quote: {
+                tokenIn: 'USDG',
+                tokenOut: 'ETH',
+                amountIn: parsedAmount.toString(),
+                estimatedAmountOut: (Number(amountOut) / 1e18).toFixed(6),
+                minimumAmountOut: (Number(amountOutMin) / 1e18).toFixed(6),
+                slippageBps: slippage.toString(),
+            },
+            router: 'Uniswap V2',
+            network: 'robinhood-chain',
+            note: 'Sign and broadcast each transaction in order with your private key.',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Trade construction error:', err.message);
+        res.status(500).json({ error: 'Failed to construct trade transaction', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Quote (swap price check, no tx constructed) ─────────
+router.get('/quote/:tokenIn/:tokenOut/:amountIn', async (req, res) => {
+    try {
+        const { tokenIn, tokenOut, amountIn } = req.params;
+        const upperIn = tokenIn.toUpperCase();
+        const upperOut = tokenOut.toUpperCase();
+        const pairKey = [upperIn, upperOut].sort().join('/');
+        if (pairKey !== 'ETH/USDG') {
+            return res.status(400).json({
+                error: `Unsupported pair: ${tokenIn}/${tokenOut}`,
+                hint: 'Only ETH <-> USDG is quotable right now (the only Robinhood Chain pool with real liquidity).',
+            });
+        }
+
+        const parsedAmount = parseFloat(amountIn);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            return res.status(400).json({ error: 'amountIn must be a positive number' });
+        }
+
+        const decimalsIn = upperIn === 'ETH' ? 18 : USDG_DECIMALS;
+        const decimalsOut = upperOut === 'ETH' ? 18 : USDG_DECIMALS;
+        const tokenAddrIn = upperIn === 'ETH' ? WETH_CONTRACT : USDG_CONTRACT;
+        const tokenAddrOut = upperOut === 'ETH' ? WETH_CONTRACT : USDG_CONTRACT;
+
+        const amountInAtomic = BigInt(Math.floor(parsedAmount * 10 ** decimalsIn));
+        const amountOut = await getAmountsOutV2(amountInAtomic, [tokenAddrIn, tokenAddrOut]);
+        const amountOutFormatted = Number(amountOut) / 10 ** decimalsOut;
+
+        res.json({
+            tokenIn: upperIn,
+            tokenOut: upperOut,
+            amountIn: parsedAmount.toString(),
+            amountOut: amountOutFormatted.toFixed(6),
+            price: (amountOutFormatted / parsedAmount).toFixed(6),
+            router: 'Uniswap V2',
+            network: 'robinhood-chain',
+            chainId: 4663,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Quote error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch quote', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Pool (Uniswap V2 WETH/USDG liquidity) ──────────────
+router.get('/pool/:tokenA/:tokenB', async (req, res) => {
+    try {
+        const { tokenA, tokenB } = req.params;
+        const pairKey = [tokenA.toUpperCase(), tokenB.toUpperCase()].sort().join('/');
+        if (pairKey !== 'ETH/USDG') {
+            return res.status(400).json({
+                error: `Unsupported pair: ${tokenA}/${tokenB}`,
+                hint: 'Only the ETH/USDG pool is tracked right now.',
+            });
+        }
+
+        const paddedWeth = padAddress(WETH_CONTRACT);
+        const paddedUsdg = padAddress(USDG_CONTRACT);
+        const getPairSelector = '0xe6a43905';
+        const pairHex = await robinhoodRpc('eth_call', [
+            { to: UNISWAP_V2_FACTORY, data: getPairSelector + paddedWeth + paddedUsdg },
+            'latest',
+        ]);
+        const pairAddress = '0x' + pairHex.slice(-40);
+        if (/^0x0+$/.test(pairAddress)) {
+            return res.status(404).json({ error: 'Pool not found' });
+        }
+
+        const reservesHex = await robinhoodRpc('eth_call', [{ to: pairAddress, data: '0x0902f1ac' }, 'latest']);
+        const hex = reservesHex.slice(2);
+        const reserveWeth = BigInt('0x' + hex.slice(0, 64));
+        const reserveUsdg = BigInt('0x' + hex.slice(64, 128));
+        const wethAmount = Number(reserveWeth) / 1e18;
+        const usdgAmount = Number(reserveUsdg) / 10 ** USDG_DECIMALS;
+
+        res.json({
+            pair: 'ETH/USDG',
+            pairAddress,
+            router: 'Uniswap V2',
+            reserves: { ETH: wethAmount.toFixed(6), USDG: usdgAmount.toFixed(2) },
+            impliedPrice: { ETH_in_USDG: (usdgAmount / wethAmount).toFixed(2) },
+            network: 'robinhood-chain',
+            chainId: 4663,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Pool lookup error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch pool info', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Yield (Morpho steakUSDG vault, powers Robinhood Earn) ─
+// Queried live from Morpho's official GraphQL API (api.morpho.org) — not
+// hardcoded APY, since the rate changes with utilization.
+const MORPHO_STEAKHOUSE_USDG_VAULT = '0xBeEff033F34C046626B8D0A041844C5d1A5409dd';
+router.get('/yield/usdg', async (req, res) => {
+    try {
+        const query = `query {
+            vaultV2ByAddress(address: "${MORPHO_STEAKHOUSE_USDG_VAULT}", chainId: 4663) {
+                address
+                name
+                symbol
+                totalAssetsUsd
+                netApy
+                avgNetApy
+            }
+        }`;
+        const morphoRes = await fetch('https://api.morpho.org/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+        });
+        const json = await morphoRes.json();
+        const vault = json.data && json.data.vaultV2ByAddress;
+        if (!vault) {
+            return res.status(502).json({ error: 'Vault data unavailable' });
+        }
+
+        res.json({
+            vault: vault.name,
+            symbol: vault.symbol,
+            address: vault.address,
+            asset: 'USDG',
+            curator: 'Steakhouse Financial',
+            protocol: 'Morpho',
+            note: 'This is the vault that powers Robinhood Earn.',
+            apy: (vault.netApy * 100).toFixed(2) + '%',
+            avgApy30d: (vault.avgNetApy * 100).toFixed(2) + '%',
+            tvlUSD: vault.totalAssetsUsd.toFixed(2),
+            network: 'robinhood-chain',
+            chainId: 4663,
+            source: 'morpho-api',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Yield lookup error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch yield data', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Bridge (Across quote into Robinhood Chain) ─────────
+// Uses Across's public suggested-fees API (no key required) — Across is a
+// day-one bridging partner for Robinhood Chain, confirmed live on-chain via
+// its own spoke pool at 0xD29C85F15DF544bA632C9E25829fd29d767d7978.
+const ACROSS_ORIGIN_TOKENS = {
+    // originChainId -> { USDC, WETH } addresses, for routes into Robinhood Chain (USDG / WETH)
+    1: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', chainName: 'Ethereum' },
+    42161: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', WETH: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', chainName: 'Arbitrum' },
+    8453: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', WETH: '0x4200000000000000000000000000000000000006', chainName: 'Base' },
+};
+// Destination (Robinhood Chain) side of each route — USDC bridges in as USDG, WETH stays WETH.
+const ACROSS_DESTINATION_TOKENS = { USDC: USDG_CONTRACT, WETH: WETH_CONTRACT };
+
+router.get('/bridge/:originChain/:token/:amount', async (req, res) => {
+    try {
+        const { originChain, token, amount } = req.params;
+        const originChainId = Number(originChain);
+        const tokenUpper = token.toUpperCase();
+
+        const originConfig = ACROSS_ORIGIN_TOKENS[originChainId];
+        if (!originConfig || !originConfig[tokenUpper]) {
+            return res.status(400).json({
+                error: `Unsupported route: ${token} from chain ${originChain}`,
+                hint: 'Supported origin chains: 1 (Ethereum), 42161 (Arbitrum), 8453 (Base). Supported tokens: USDC, WETH.',
+            });
+        }
+
+        const decimals = tokenUpper === 'USDC' ? 6 : 18;
+        const parsedAmount = parseFloat(amount);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            return res.status(400).json({ error: 'amount must be a positive number' });
+        }
+        const amountAtomic = BigInt(Math.floor(parsedAmount * 10 ** decimals));
+
+        const inputToken = originConfig[tokenUpper];
+        const outputToken = ACROSS_DESTINATION_TOKENS[tokenUpper];
+        const url = `https://app.across.to/api/suggested-fees?originChainId=${originChainId}&destinationChainId=4663&inputToken=${inputToken}&outputToken=${outputToken}&amount=${amountAtomic}`;
+        const acrossRes = await fetch(url);
+        const data = await acrossRes.json();
+
+        if (data.type === 'AcrossApiError' || !data.outputAmount) {
+            return res.status(502).json({ error: 'Bridge quote unavailable', details: data.message || data });
+        }
+
+        const outputDecimals = data.outputToken && data.outputToken.decimals ? data.outputToken.decimals : decimals;
+
+        res.json({
+            from: { chainId: originChainId, chainName: originConfig.chainName, token: tokenUpper, amount: parsedAmount.toString() },
+            to: {
+                chainId: 4663,
+                chainName: 'Robinhood Chain',
+                token: data.outputToken.symbol,
+                amount: (Number(data.outputAmount) / 10 ** outputDecimals).toFixed(6),
+            },
+            estimatedFillTimeSeconds: data.estimatedFillTimeSec,
+            totalFeePct: (Number(data.relayFeePct) / 1e18 * 100).toFixed(4) + '%',
+            spokePoolAddress: data.spokePoolAddress,
+            destinationSpokePoolAddress: data.destinationSpokePoolAddress,
+            provider: 'Across Protocol',
+            note: 'This is a quote only. Depositing on the origin chain\'s spoke pool executes the bridge; a relayer fills it on Robinhood Chain in seconds.',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Bridge quote error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch bridge quote', details: err.message });
+    }
 });
 
 // ─── Paid Endpoint: Fund (Balance + Deposit Info) ────
@@ -897,6 +1306,16 @@ const REQUEST_BODIES = {
         content: { 'application/json': { schema: { type: 'object', required: ['tx', 'privateKey'], properties: {
             tx: { type: 'object', properties: { to: { type: 'string' }, data: { type: 'string' }, value: { type: 'string' } } },
             privateKey: { type: 'string', description: '66-char hex string starting with 0x' },
+        } } } },
+    },
+    'POST /trade': {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['tokenIn', 'tokenOut', 'amountIn', 'from'], properties: {
+            tokenIn: { type: 'string', enum: ['ETH', 'USDG'] },
+            tokenOut: { type: 'string', enum: ['ETH', 'USDG'] },
+            amountIn: { type: 'string', description: 'Human-readable amount of tokenIn' },
+            from: { type: 'string', description: 'Your wallet address (receives the swap output)' },
+            slippageBps: { type: 'number', description: 'Optional slippage tolerance in basis points, default 100 (1%)' },
         } } } },
     },
 };
