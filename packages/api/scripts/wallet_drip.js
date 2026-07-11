@@ -10,11 +10,11 @@
 //   FUNDING_PRIVATE_KEY=0x... node scripts/wallet_drip.js
 //
 // Optional env vars:
-//   NUM_WALLETS           how many fresh wallets to generate   (default 5)
-//   FUND_PER_WALLET_USDG  USDG sent to each fresh wallet        (default 0.3)
+//   NUM_WALLETS           how many fresh wallets to generate   (default 10)
+//   FUND_PER_WALLET_USDG  USDG sent to each fresh wallet        (default 0.15)
 //   TARGET_BASE_URL       server to hit                         (default https://projectr0x.dev)
-//   MIN_DELAY_MS          min delay between txns for a wallet   (default 5000)
-//   MAX_DELAY_MS          max delay between txns for a wallet   (default 15000)
+//   MIN_DELAY_MS          min delay between txns for a wallet   (default 10000)
+//   MAX_DELAY_MS          max delay between txns for a wallet   (default 30000)
 
 const crypto = require('crypto');
 const {
@@ -29,10 +29,10 @@ const { privateKeyToAccount, generatePrivateKey } = require('viem/accounts');
 const RPC = 'https://rpc.mainnet.chain.robinhood.com';
 const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
 const BASE_URL = process.env.TARGET_BASE_URL || 'https://projectr0x.dev';
-const NUM_WALLETS = parseInt(process.env.NUM_WALLETS || '5', 10);
-const FUND_PER_WALLET = parseFloat(process.env.FUND_PER_WALLET_USDG || '0.3');
-const MIN_DELAY_MS = parseInt(process.env.MIN_DELAY_MS || '5000', 10);
-const MAX_DELAY_MS = parseInt(process.env.MAX_DELAY_MS || '15000', 10);
+const NUM_WALLETS = parseInt(process.env.NUM_WALLETS || '10', 10);
+const FUND_PER_WALLET = parseFloat(process.env.FUND_PER_WALLET_USDG || '0.15');
+const MIN_DELAY_MS = parseInt(process.env.MIN_DELAY_MS || '10000', 10);
+const MAX_DELAY_MS = parseInt(process.env.MAX_DELAY_MS || '30000', 10);
 const MIN_BALANCE_ATOMIC = 10000n; // 0.01 USDG, the cheapest endpoint price
 
 const robinhoodChain = defineChain({
