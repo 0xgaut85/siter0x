@@ -58,6 +58,9 @@ app.get('/.well-known/x402', (req, res) => {
             `${R0X_ORIGIN}/skill/trade`,
             `${R0X_ORIGIN}/skill/quote/ETH/USDG/0.1`,
             `${R0X_ORIGIN}/skill/pool/ETH/USDG`,
+            `${R0X_ORIGIN}/skill/liquidity/add`,
+            `${R0X_ORIGIN}/skill/liquidity/remove`,
+            `${R0X_ORIGIN}/skill/liquidity/positions/0x0000000000000000000000000000000000000001`,
             `${R0X_ORIGIN}/skill/yield/usdg`,
             `${R0X_ORIGIN}/skill/bridge/42161/USDC/100`,
             `${R0X_ORIGIN}/skill/fund/0x0000000000000000000000000000000000000001`,
@@ -78,9 +81,12 @@ app.get('/.well-known/x402', (req, res) => {
             '- **Wallet Generation** - Generate a fresh Robinhood Chain keypair\n' +
             '- **AI Chat** - Chat with the r0x Agent ($0.01/message)\n' +
             '- **Send** - Construct unsigned ETH or USDG transfer tx\n' +
-            '- **Trade** - Real Uniswap V2 swap tx (ETH <-> USDG) on Robinhood Chain\n' +
-            '- **Quote** - Live swap price quote, no tx constructed\n' +
-            '- **Pool** - Uniswap V2 pool reserves and implied price\n' +
+            '- **Trade** - Real Uniswap V3 swap tx between any two tokens on Robinhood Chain, no allowlist\n' +
+            '- **Quote** - Live swap price quote for any token pair, no tx constructed\n' +
+            '- **Pool** - Uniswap V3 pool reserves and implied price for any token pair\n' +
+            '- **Liquidity Add** - Mint a Uniswap V3 position with a custom price range\n' +
+            '- **Liquidity Remove** - Withdraw and collect a Uniswap V3 position by tokenId\n' +
+            '- **Liquidity Positions** - List an address\'s Uniswap V3 position NFTs\n' +
             '- **Yield** - Morpho steakUSDG vault APY (powers Robinhood Earn)\n' +
             '- **Bridge** - Across Protocol quote for bridging onto Robinhood Chain\n' +
             '- **Fund** - Wallet balance and funding instructions\n' +

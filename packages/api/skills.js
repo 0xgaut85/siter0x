@@ -7,7 +7,7 @@ const { x402Facilitator } = require('@x402/core/facilitator');
 const { ExactEvmScheme } = require('@x402/evm/exact/server');
 const { registerExactEvmScheme } = require('@x402/evm/exact/facilitator');
 const { toFacilitatorEvmSigner } = require('@x402/evm');
-const { createWalletClient, http, publicActions, defineChain } = require('viem');
+const { createWalletClient, http, publicActions, defineChain, encodeFunctionData, decodeFunctionResult, encodePacked } = require('viem');
 const { privateKeyToAccount } = require('viem/accounts');
 const OpenAI = require('openai');
 const { Redis } = require('@upstash/redis');
@@ -82,14 +82,10 @@ const USDG_CONTRACT = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
 const USDG_DECIMALS = 6;
 const USDG_EIP712 = { name: 'Global Dollar', version: '1', decimals: USDG_DECIMALS };
 
-// ─── Uniswap V2 on Robinhood Chain — verified on-chain (eth_getCode + live
-// WETH/USDG pool reserves), addresses match Robinhood's official token
-// contracts page and Uniswap's own launch announcement:
-//   WETH/USDG V2 pair holds real liquidity (~32 WETH / ~58k USDG at time of
-//   writing) — confirmed via getPair() + getReserves(), not assumed.
+// ─── WETH on Robinhood Chain — verified on-chain (eth_getCode + live
+// Uniswap V3 pool liquidity), address matches Robinhood's official token
+// contracts page and Uniswap's own launch announcement.
 const WETH_CONTRACT = '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73'; // Robinhood's non-standard WETH (verified name/symbol/decimals on-chain)
-const UNISWAP_V2_ROUTER = '0x89e5DB8B5aA49aA85AC63f691524311AEB649eba';
-const UNISWAP_V2_FACTORY = '0x8bcEaA40B9AcdfAedF85AdF4FF01F5Ad6517937f';
 const SWAP_SLIPPAGE_BPS_DEFAULT = 100n; // 1%
 
 // Helper: build an explicit AssetAmount price for USDG (dollar-string pricing can't be used —
@@ -198,17 +194,32 @@ const paywallRoutes = {
     },
     'POST /trade': {
         accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
-        description: 'Construct a real Uniswap V2 swap transaction (ETH <-> USDG) on Robinhood Chain',
+        description: 'Construct a real Uniswap V3 swap transaction between any two tokens on Robinhood Chain',
         mimeType: 'application/json',
     },
     'GET /quote/[tokenIn]/[tokenOut]/[amountIn]': {
         accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
-        description: 'Get a live Uniswap swap price quote (ETH <-> USDG) without constructing a transaction',
+        description: 'Get a live Uniswap V3 swap price quote for any token pair without constructing a transaction',
         mimeType: 'application/json',
     },
     'GET /pool/[tokenA]/[tokenB]': {
         accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
-        description: 'Get Uniswap V2 pool reserves and implied price for a token pair on Robinhood Chain',
+        description: 'Get Uniswap V3 pool reserves and implied price for any token pair on Robinhood Chain',
+        mimeType: 'application/json',
+    },
+    'POST /liquidity/add': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Mint a Uniswap V3 liquidity position for any token pair, with a custom price range',
+        mimeType: 'application/json',
+    },
+    'POST /liquidity/remove': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Withdraw and collect a Uniswap V3 liquidity position by tokenId',
+        mimeType: 'application/json',
+    },
+    'GET /liquidity/positions/[address]': {
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'List every Uniswap V3 liquidity position NFT owned by an address',
         mimeType: 'application/json',
     },
     'GET /yield/usdg': {
@@ -404,7 +415,7 @@ router.get('/catalog', (req, res) => {
             price: '$0.01',
             currency: 'USDG',
             network: network,
-            description: 'Construct a real Uniswap V2 swap transaction (ETH <-> USDG) on Robinhood Chain. Client signs and broadcasts.',
+            description: 'Construct a real Uniswap V3 swap transaction between any two tokens on Robinhood Chain (no allowlist — pass any ERC20 address). Client signs and broadcasts.',
             example: 'POST /skill/trade { "tokenIn": "ETH", "tokenOut": "USDG", "amountIn": "0.1", "from": "0x..." }',
         },
         {
@@ -413,7 +424,7 @@ router.get('/catalog', (req, res) => {
             price: '$0.01',
             currency: 'USDG',
             network: network,
-            description: 'Get a live Uniswap swap price quote (ETH <-> USDG) with no transaction constructed',
+            description: 'Get a live Uniswap V3 swap price quote for any token pair, with no transaction constructed',
             example: '/skill/quote/ETH/USDG/0.1',
         },
         {
@@ -422,8 +433,35 @@ router.get('/catalog', (req, res) => {
             price: '$0.01',
             currency: 'USDG',
             network: network,
-            description: 'Get Uniswap V2 pool reserves and implied price for a token pair on Robinhood Chain',
+            description: 'Get Uniswap V3 pool reserves and implied price for any token pair on Robinhood Chain',
             example: '/skill/pool/ETH/USDG',
+        },
+        {
+            endpoint: '/skill/liquidity/add',
+            method: 'POST',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'Mint a Uniswap V3 liquidity position for any token pair, with a custom price range. Client signs and broadcasts.',
+            example: 'POST /skill/liquidity/add { "tokenA": "ETH", "tokenB": "USDG", "amountA": "0.1", "amountB": "180", "from": "0x...", "rangePct": 10 }',
+        },
+        {
+            endpoint: '/skill/liquidity/remove',
+            method: 'POST',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'Withdraw and collect a Uniswap V3 liquidity position by tokenId. Client signs and broadcasts.',
+            example: 'POST /skill/liquidity/remove { "tokenId": "12345", "from": "0x..." }',
+        },
+        {
+            endpoint: '/skill/liquidity/positions/:address',
+            method: 'GET',
+            price: '$0.01',
+            currency: 'USDG',
+            network: network,
+            description: 'List every Uniswap V3 liquidity position NFT owned by an address',
+            example: '/skill/liquidity/positions/0x101Cd32b9bEEE93845Ead7Bc604a5F1873330acf',
         },
         {
             endpoint: '/skill/yield/usdg',
@@ -829,42 +867,217 @@ router.post('/send', async (req, res) => {
     }
 });
 
-// ─── Uniswap V2 helpers (ETH <-> USDG, the only pair with real liquidity) ─
-function padHex(value, bytes = 32) {
-    return BigInt(value).toString(16).padStart(bytes * 2, '0');
-}
-function padAddress(address) {
-    return address.substring(2).toLowerCase().padStart(64, '0');
-}
-function encodeAddressArrayTail(addresses) {
-    // ABI tail for a dynamic address[] param: [length][item0][item1]...
-    // (the head-word "offset" pointing here is computed separately by each caller,
-    // since it depends on how many other params precede this one)
-    const length = padHex(addresses.length, 32);
-    const items = addresses.map(a => padAddress(a)).join('');
-    return length + items;
-}
-
-async function getAmountsOutV2(amountIn, path) {
-    const selector = '0xd06ca61f'; // getAmountsOut(uint256,address[])
-    // 2 head words (amountIn, offset) = 0x40 bytes before the path's tail begins
-    const data = selector + padHex(amountIn, 32) + padHex(0x40, 32) + encodeAddressArrayTail(path);
-    const result = await robinhoodRpc('eth_call', [{ to: UNISWAP_V2_ROUTER, data }, 'latest']);
-    // returns (offset, length, amounts[0], amounts[1]); we only need the last slot
-    const hex = result.slice(2);
-    const lastSlot = hex.slice(-64);
-    return BigInt('0x' + lastSlot);
-}
-
 function applySlippage(amount, slippageBps) {
     return (amount * (10000n - slippageBps)) / 10000n;
 }
 
-// ─── Paid Endpoint: Trade (real Uniswap V2 swap, ETH <-> USDG) ──────────
-// Uniswap v2/v3/v4 + UniswapX went live on Robinhood Chain at mainnet launch.
-// This uses the V2 router directly (no API key, no third-party dependency) —
-// contract addresses and the WETH/USDG pool were verified on-chain via
-// eth_getCode and getReserves() before wiring this up.
+// ─── Uniswap V3 (any-token trading + liquidity provision) ──────────────
+// V3/V4 + UniswapX went live on Robinhood Chain at mainnet launch alongside
+// V2. Addresses below were verified on-chain via eth_getCode (all deployed)
+// and cross-checked against Robinhood's own contract-addresses page. Trading
+// and LP moved fully onto V3 here since it holds deeper, fee-tiered liquidity
+// than the V2 pair and is the only version that supports arbitrary tokens
+// without a bespoke pair contract per pair.
+const UNISWAP_V3_FACTORY = '0x1f7d7550B1b028f7571E69A784071F0205FD2EfA';
+const UNISWAP_V3_SWAP_ROUTER02 = '0xCaf681a66D020601342297493863E78C959E5cb2';
+const UNISWAP_V3_QUOTER_V2 = '0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7';
+const UNISWAP_V3_POSITION_MANAGER = '0x73991a25C818Bf1f1128dEAaB1492D45638DE0D3';
+const V3_FEE_TIERS = [100, 500, 3000, 10000];
+// SwapRouter02's Payments sentinel: routing recipient=ADDRESS_THIS keeps the
+// output (as WETH) inside the router so a following unwrapWETH9 call, bundled
+// via multicall, can send real native ETH to the caller in the same tx.
+const V3_ADDRESS_THIS = '0x0000000000000000000000000000000000000002';
+const MIN_TICK = -887272;
+const MAX_TICK = 887272;
+
+const erc20Abi = [
+    { name: 'decimals', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint8' }] },
+    { name: 'symbol', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+    { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }] },
+    { name: 'approve', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] },
+];
+const v3FactoryAbi = [{ name: 'getPool', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'address' }, { type: 'uint24' }], outputs: [{ type: 'address' }] }];
+const v3PoolAbi = [
+    { name: 'slot0', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint160' }, { type: 'int24' }, { type: 'uint16' }, { type: 'uint16' }, { type: 'uint16' }, { type: 'uint8' }, { type: 'bool' }] },
+    { name: 'liquidity', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint128' }] },
+    { name: 'tickSpacing', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'int24' }] },
+    { name: 'token0', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
+];
+const v3QuoterAbi = [
+    {
+        name: 'quoteExactInputSingle', type: 'function', stateMutability: 'nonpayable',
+        inputs: [{ name: 'params', type: 'tuple', components: [{ name: 'tokenIn', type: 'address' }, { name: 'tokenOut', type: 'address' }, { name: 'amountIn', type: 'uint256' }, { name: 'fee', type: 'uint24' }, { name: 'sqrtPriceLimitX96', type: 'uint160' }] }],
+        outputs: [{ type: 'uint256' }, { type: 'uint160' }, { type: 'uint32' }, { type: 'uint256' }],
+    },
+    {
+        name: 'quoteExactInput', type: 'function', stateMutability: 'nonpayable',
+        inputs: [{ name: 'path', type: 'bytes' }, { name: 'amountIn', type: 'uint256' }],
+        outputs: [{ type: 'uint256' }, { type: 'uint160[]' }, { type: 'uint32[]' }, { type: 'uint256' }],
+    },
+];
+const v3RouterAbi = [
+    {
+        name: 'exactInputSingle', type: 'function', stateMutability: 'payable',
+        inputs: [{ name: 'params', type: 'tuple', components: [{ name: 'tokenIn', type: 'address' }, { name: 'tokenOut', type: 'address' }, { name: 'fee', type: 'uint24' }, { name: 'recipient', type: 'address' }, { name: 'amountIn', type: 'uint256' }, { name: 'amountOutMinimum', type: 'uint256' }, { name: 'sqrtPriceLimitX96', type: 'uint160' }] }],
+        outputs: [{ type: 'uint256' }],
+    },
+    {
+        name: 'exactInput', type: 'function', stateMutability: 'payable',
+        inputs: [{ name: 'params', type: 'tuple', components: [{ name: 'path', type: 'bytes' }, { name: 'recipient', type: 'address' }, { name: 'amountIn', type: 'uint256' }, { name: 'amountOutMinimum', type: 'uint256' }] }],
+        outputs: [{ type: 'uint256' }],
+    },
+    { name: 'unwrapWETH9', type: 'function', stateMutability: 'payable', inputs: [{ name: 'amountMinimum', type: 'uint256' }, { name: 'recipient', type: 'address' }], outputs: [] },
+    { name: 'multicall', type: 'function', stateMutability: 'payable', inputs: [{ name: 'data', type: 'bytes[]' }], outputs: [{ type: 'bytes[]' }] },
+];
+const v3PositionManagerAbi = [
+    {
+        name: 'mint', type: 'function', stateMutability: 'payable',
+        inputs: [{ name: 'params', type: 'tuple', components: [{ name: 'token0', type: 'address' }, { name: 'token1', type: 'address' }, { name: 'fee', type: 'uint24' }, { name: 'tickLower', type: 'int24' }, { name: 'tickUpper', type: 'int24' }, { name: 'amount0Desired', type: 'uint256' }, { name: 'amount1Desired', type: 'uint256' }, { name: 'amount0Min', type: 'uint256' }, { name: 'amount1Min', type: 'uint256' }, { name: 'recipient', type: 'address' }, { name: 'deadline', type: 'uint256' }] }],
+        outputs: [{ type: 'uint256' }, { type: 'uint128' }, { type: 'uint256' }, { type: 'uint256' }],
+    },
+    {
+        name: 'decreaseLiquidity', type: 'function', stateMutability: 'payable',
+        inputs: [{ name: 'params', type: 'tuple', components: [{ name: 'tokenId', type: 'uint256' }, { name: 'liquidity', type: 'uint128' }, { name: 'amount0Min', type: 'uint256' }, { name: 'amount1Min', type: 'uint256' }, { name: 'deadline', type: 'uint256' }] }],
+        outputs: [{ type: 'uint256' }, { type: 'uint256' }],
+    },
+    {
+        name: 'collect', type: 'function', stateMutability: 'payable',
+        inputs: [{ name: 'params', type: 'tuple', components: [{ name: 'tokenId', type: 'uint256' }, { name: 'recipient', type: 'address' }, { name: 'amount0Max', type: 'uint128' }, { name: 'amount1Max', type: 'uint128' }] }],
+        outputs: [{ type: 'uint256' }, { type: 'uint256' }],
+    },
+    { name: 'burn', type: 'function', stateMutability: 'payable', inputs: [{ type: 'uint256' }], outputs: [] },
+    { name: 'refundETH', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] },
+    { name: 'unwrapWETH9', type: 'function', stateMutability: 'payable', inputs: [{ name: 'amountMinimum', type: 'uint256' }, { name: 'recipient', type: 'address' }], outputs: [] },
+    { name: 'sweepToken', type: 'function', stateMutability: 'payable', inputs: [{ name: 'token', type: 'address' }, { name: 'amountMinimum', type: 'uint256' }, { name: 'recipient', type: 'address' }], outputs: [] },
+    { name: 'multicall', type: 'function', stateMutability: 'payable', inputs: [{ name: 'data', type: 'bytes[]' }], outputs: [{ type: 'bytes[]' }] },
+    {
+        name: 'positions', type: 'function', stateMutability: 'view', inputs: [{ type: 'uint256' }],
+        outputs: [{ type: 'uint96' }, { type: 'address' }, { name: 'token0', type: 'address' }, { name: 'token1', type: 'address' }, { name: 'fee', type: 'uint24' }, { name: 'tickLower', type: 'int24' }, { name: 'tickUpper', type: 'int24' }, { name: 'liquidity', type: 'uint128' }, { type: 'uint256' }, { type: 'uint256' }, { name: 'tokensOwed0', type: 'uint128' }, { name: 'tokensOwed1', type: 'uint128' }],
+    },
+    { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }] },
+    { name: 'tokenOfOwnerByIndex', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'uint256' }] },
+    { name: 'ownerOf', type: 'function', stateMutability: 'view', inputs: [{ type: 'uint256' }], outputs: [{ type: 'address' }] },
+];
+
+async function readContract(address, abi, functionName, args = []) {
+    const data = encodeFunctionData({ abi, functionName, args });
+    const result = await robinhoodRpc('eth_call', [{ to: address, data }, 'latest']);
+    return decodeFunctionResult({ abi, functionName, data: result });
+}
+
+const KNOWN_TOKENS = {
+    ETH: { address: WETH_CONTRACT, decimals: 18, symbol: 'ETH', isNative: true },
+    USDG: { address: USDG_CONTRACT, decimals: USDG_DECIMALS, symbol: 'USDG', isNative: false },
+};
+
+// Resolves 'ETH', 'USDG', or any raw ERC20 address into { address, decimals, symbol, isNative }.
+// Arbitrary tokens are read live on-chain (decimals/symbol) — there is no allowlist, so a bad
+// or non-ERC20 address surfaces as a clear error rather than a silent wrong result.
+async function resolveToken(input) {
+    const upper = String(input).toUpperCase();
+    if (KNOWN_TOKENS[upper]) return KNOWN_TOKENS[upper];
+    if (!/^0x[0-9a-fA-F]{40}$/.test(input)) {
+        throw new Error(`"${input}" is not "ETH", "USDG", or a valid 0x token address`);
+    }
+    try {
+        const [decimals, symbol] = await Promise.all([
+            readContract(input, erc20Abi, 'decimals'),
+            readContract(input, erc20Abi, 'symbol'),
+        ]);
+        return { address: input, decimals: Number(decimals), symbol, isNative: false };
+    } catch (err) {
+        throw new Error(`${input} does not look like an ERC20 token on Robinhood Chain (decimals()/symbol() call failed)`);
+    }
+}
+
+// Best (highest-liquidity) direct V3 pool between two tokens, across all fee tiers. Null if none exist.
+async function findBestPool(tokenA, tokenB) {
+    const candidates = [];
+    for (const fee of V3_FEE_TIERS) {
+        const pool = await readContract(UNISWAP_V3_FACTORY, v3FactoryAbi, 'getPool', [tokenA, tokenB, fee]);
+        if (pool === '0x0000000000000000000000000000000000000000') continue;
+        const liquidity = await readContract(pool, v3PoolAbi, 'liquidity');
+        if (liquidity > 0n) candidates.push({ fee, pool, liquidity });
+    }
+    if (candidates.length === 0) return null;
+    return candidates.reduce((best, c) => (c.liquidity > best.liquidity ? c : best));
+}
+
+// Finds a route from tokenIn to tokenOut: a direct pool if one has liquidity, otherwise a
+// two-hop route through WETH or USDG (whichever token isn't already an endpoint).
+async function findRoute(tokenIn, tokenOut) {
+    const direct = await findBestPool(tokenIn, tokenOut);
+    if (direct) return { hops: [{ tokenIn, tokenOut, fee: direct.fee, pool: direct.pool }] };
+
+    for (const hub of [WETH_CONTRACT, USDG_CONTRACT]) {
+        if (hub.toLowerCase() === tokenIn.toLowerCase() || hub.toLowerCase() === tokenOut.toLowerCase()) continue;
+        const [legA, legB] = await Promise.all([findBestPool(tokenIn, hub), findBestPool(hub, tokenOut)]);
+        if (legA && legB) {
+            return {
+                hops: [
+                    { tokenIn, tokenOut: hub, fee: legA.fee, pool: legA.pool },
+                    { tokenIn: hub, tokenOut, fee: legB.fee, pool: legB.pool },
+                ],
+            };
+        }
+    }
+    return null;
+}
+
+function encodeV3Path(hops) {
+    let path = '0x';
+    for (let i = 0; i < hops.length; i++) {
+        path += hops[i].tokenIn.replace('0x', '').toLowerCase();
+        path += hops[i].fee.toString(16).padStart(6, '0');
+    }
+    path += hops[hops.length - 1].tokenOut.replace('0x', '').toLowerCase();
+    return path;
+}
+
+async function quoteRoute(route, amountIn) {
+    if (route.hops.length === 1) {
+        const { tokenIn, tokenOut, fee } = route.hops[0];
+        const [amountOut] = await readContract(UNISWAP_V3_QUOTER_V2, v3QuoterAbi, 'quoteExactInputSingle', [
+            { tokenIn, tokenOut, amountIn, fee, sqrtPriceLimitX96: 0n },
+        ]);
+        return amountOut;
+    }
+    const path = encodeV3Path(route.hops);
+    const [amountOut] = await readContract(UNISWAP_V3_QUOTER_V2, v3QuoterAbi, 'quoteExactInput', [path, amountIn]);
+    return amountOut;
+}
+
+function buildSwapTx({ route, amountIn, amountOutMin, from, tokenOutIsNative }) {
+    const recipient = tokenOutIsNative ? V3_ADDRESS_THIS : from;
+    let swapCalldata;
+    if (route.hops.length === 1) {
+        const { tokenIn, tokenOut, fee } = route.hops[0];
+        swapCalldata = encodeFunctionData({
+            abi: v3RouterAbi, functionName: 'exactInputSingle',
+            args: [{ tokenIn, tokenOut, fee, recipient, amountIn, amountOutMinimum: amountOutMin, sqrtPriceLimitX96: 0n }],
+        });
+    } else {
+        const path = encodeV3Path(route.hops);
+        swapCalldata = encodeFunctionData({
+            abi: v3RouterAbi, functionName: 'exactInput',
+            args: [{ path, recipient, amountIn, amountOutMinimum: amountOutMin }],
+        });
+    }
+    if (!tokenOutIsNative) return swapCalldata;
+
+    const unwrapCalldata = encodeFunctionData({ abi: v3RouterAbi, functionName: 'unwrapWETH9', args: [amountOutMin, from] });
+    return encodeFunctionData({ abi: v3RouterAbi, functionName: 'multicall', args: [[swapCalldata, unwrapCalldata]] });
+}
+
+function routeFeesLabel(route) {
+    return route.hops.map((h) => `${h.fee / 10000}%`).join(' -> ');
+}
+
+// ─── Paid Endpoint: Trade (real Uniswap V3 swap, any token) ────────────
+// Fully open token input by design: pass 'ETH', 'USDG', or any ERC20 address.
+// r0x doesn't maintain an allowlist here — resolveToken() and findRoute() are
+// the only gates, so trading an illiquid or scam token is possible; it will
+// just quote/execute at whatever real price that token's pool implies.
 router.post('/trade', async (req, res) => {
     try {
         const { tokenIn, tokenOut, amountIn, from, slippageBps } = req.body;
@@ -880,90 +1093,64 @@ router.post('/trade', async (req, res) => {
             return res.status(400).json({ error: 'amountIn must be a positive number' });
         }
 
-        const upperIn = tokenIn.toUpperCase();
-        const upperOut = tokenOut.toUpperCase();
-        const pairKey = [upperIn, upperOut].sort().join('/');
-        if (pairKey !== 'ETH/USDG') {
-            return res.status(400).json({
-                error: `Unsupported pair: ${tokenIn}/${tokenOut}`,
-                hint: 'Only ETH <-> USDG is supported right now (the only Robinhood Chain pool with real liquidity). More pairs land as liquidity deepens.',
+        const [inToken, outToken] = await Promise.all([resolveToken(tokenIn), resolveToken(tokenOut)]);
+        if (inToken.address.toLowerCase() === outToken.address.toLowerCase()) {
+            return res.status(400).json({ error: 'tokenIn and tokenOut resolve to the same token' });
+        }
+
+        const route = await findRoute(inToken.address, outToken.address);
+        if (!route) {
+            return res.status(404).json({
+                error: `No Uniswap V3 route found between ${inToken.symbol} and ${outToken.symbol}`,
+                hint: 'No direct pool, and no route through WETH or USDG has liquidity either.',
             });
         }
 
         const slippage = slippageBps ? BigInt(Math.round(Number(slippageBps))) : SWAP_SLIPPAGE_BPS_DEFAULT;
-        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200); // 20 minutes
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+        const amountInAtomic = BigInt(Math.round(parsedAmount * 10 ** inToken.decimals));
+        const amountOut = await quoteRoute(route, amountInAtomic);
+        const amountOutMin = applySlippage(amountOut, slippage);
 
-        if (upperIn === 'ETH') {
-            const amountInWei = BigInt(Math.floor(parsedAmount * 1e18));
-            const path = [WETH_CONTRACT, USDG_CONTRACT];
-            const amountOut = await getAmountsOutV2(amountInWei, path);
-            const amountOutMin = applySlippage(amountOut, slippage);
+        const quote = {
+            tokenIn: inToken.symbol,
+            tokenOut: outToken.symbol,
+            amountIn: parsedAmount.toString(),
+            estimatedAmountOut: (Number(amountOut) / 10 ** outToken.decimals).toFixed(6),
+            minimumAmountOut: (Number(amountOutMin) / 10 ** outToken.decimals).toFixed(6),
+            slippageBps: slippage.toString(),
+            route: routeFeesLabel(route),
+        };
 
-            // swapExactETHForTokens(uint amountOutMin, address[] path, address to, uint deadline)
-            const selector = '0x7ff36ab5';
-            const data = selector
-                + padHex(amountOutMin, 32)
-                + padHex(0x80, 32) // offset to path's tail = 4 head words * 32 bytes
-                + padAddress(from)
-                + padHex(deadline, 32)
-                + encodeAddressArrayTail(path);
+        const swapCalldata = buildSwapTx({ route, amountIn: amountInAtomic, amountOutMin, from, tokenOutIsNative: outToken.isNative });
 
+        if (inToken.isNative) {
+            // Native ETH in: SwapRouter02 wraps msg.value into WETH itself, no separate approval needed.
             return res.json({
-                tx: { to: UNISWAP_V2_ROUTER, value: '0x' + amountInWei.toString(16), data, chainId: 4663 },
-                quote: {
-                    tokenIn: 'ETH',
-                    tokenOut: 'USDG',
-                    amountIn: parsedAmount.toString(),
-                    estimatedAmountOut: (Number(amountOut) / 10 ** USDG_DECIMALS).toFixed(6),
-                    minimumAmountOut: (Number(amountOutMin) / 10 ** USDG_DECIMALS).toFixed(6),
-                    slippageBps: slippage.toString(),
-                },
-                router: 'Uniswap V2',
+                tx: { to: UNISWAP_V3_SWAP_ROUTER02, value: '0x' + amountInAtomic.toString(16), data: swapCalldata, chainId: 4663 },
+                quote,
+                router: 'Uniswap V3',
                 network: 'robinhood-chain',
                 note: 'Sign this transaction with your private key and broadcast to Robinhood Chain.',
                 timestamp: new Date().toISOString(),
             });
         }
 
-        // upperIn === 'USDG' -> USDG -> ETH, needs an approval step first
-        const amountInAtomic = BigInt(Math.floor(parsedAmount * 10 ** USDG_DECIMALS));
-        const path = [USDG_CONTRACT, WETH_CONTRACT];
-        const amountOut = await getAmountsOutV2(amountInAtomic, path);
-        const amountOutMin = applySlippage(amountOut, slippage);
-
-        const approveSelector = '0x095ea7b3'; // approve(address,uint256)
-        const approveData = approveSelector + padAddress(UNISWAP_V2_ROUTER) + padHex(amountInAtomic, 32);
-
-        // swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] path, address to, uint deadline)
-        const swapSelector = '0x18cbafe5';
-        const swapData = swapSelector
-            + padHex(amountInAtomic, 32)
-            + padHex(amountOutMin, 32)
-            + padHex(0xa0, 32) // offset to path's tail = 5 head words * 32 bytes
-            + padAddress(from)
-            + padHex(deadline, 32)
-            + encodeAddressArrayTail(path);
-
+        // ERC20 in: needs a one-time approval for the router before the swap can pull funds.
+        const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [UNISWAP_V3_SWAP_ROUTER02, amountInAtomic] });
         res.json({
             steps: [
                 {
-                    tx: { to: USDG_CONTRACT, value: '0x0', data: approveData, chainId: 4663 },
-                    note: 'Approve the Uniswap V2 router to spend your USDG (one-time per allowance).',
+                    tx: { to: inToken.address, value: '0x0', data: approveData, chainId: 4663 },
+                    note: `Approve the Uniswap V3 router to spend your ${inToken.symbol} (one-time per allowance).`,
                 },
                 {
-                    tx: { to: UNISWAP_V2_ROUTER, value: '0x0', data: swapData, chainId: 4663 },
+                    tx: { to: UNISWAP_V3_SWAP_ROUTER02, value: '0x0', data: swapCalldata, chainId: 4663 },
                     note: 'Execute the swap. Broadcast this only after the approval above confirms.',
                 },
             ],
-            quote: {
-                tokenIn: 'USDG',
-                tokenOut: 'ETH',
-                amountIn: parsedAmount.toString(),
-                estimatedAmountOut: (Number(amountOut) / 1e18).toFixed(6),
-                minimumAmountOut: (Number(amountOutMin) / 1e18).toFixed(6),
-                slippageBps: slippage.toString(),
-            },
-            router: 'Uniswap V2',
+            quote,
+            router: 'Uniswap V3',
             network: 'robinhood-chain',
             note: 'Sign and broadcast each transaction in order with your private key.',
             timestamp: new Date().toISOString(),
@@ -978,37 +1165,32 @@ router.post('/trade', async (req, res) => {
 router.get('/quote/:tokenIn/:tokenOut/:amountIn', async (req, res) => {
     try {
         const { tokenIn, tokenOut, amountIn } = req.params;
-        const upperIn = tokenIn.toUpperCase();
-        const upperOut = tokenOut.toUpperCase();
-        const pairKey = [upperIn, upperOut].sort().join('/');
-        if (pairKey !== 'ETH/USDG') {
-            return res.status(400).json({
-                error: `Unsupported pair: ${tokenIn}/${tokenOut}`,
-                hint: 'Only ETH <-> USDG is quotable right now (the only Robinhood Chain pool with real liquidity).',
-            });
-        }
-
         const parsedAmount = parseFloat(amountIn);
         if (isNaN(parsedAmount) || parsedAmount <= 0) {
             return res.status(400).json({ error: 'amountIn must be a positive number' });
         }
 
-        const decimalsIn = upperIn === 'ETH' ? 18 : USDG_DECIMALS;
-        const decimalsOut = upperOut === 'ETH' ? 18 : USDG_DECIMALS;
-        const tokenAddrIn = upperIn === 'ETH' ? WETH_CONTRACT : USDG_CONTRACT;
-        const tokenAddrOut = upperOut === 'ETH' ? WETH_CONTRACT : USDG_CONTRACT;
+        const [inToken, outToken] = await Promise.all([resolveToken(tokenIn), resolveToken(tokenOut)]);
+        const route = await findRoute(inToken.address, outToken.address);
+        if (!route) {
+            return res.status(404).json({
+                error: `No Uniswap V3 route found between ${inToken.symbol} and ${outToken.symbol}`,
+                hint: 'No direct pool, and no route through WETH or USDG has liquidity either.',
+            });
+        }
 
-        const amountInAtomic = BigInt(Math.floor(parsedAmount * 10 ** decimalsIn));
-        const amountOut = await getAmountsOutV2(amountInAtomic, [tokenAddrIn, tokenAddrOut]);
-        const amountOutFormatted = Number(amountOut) / 10 ** decimalsOut;
+        const amountInAtomic = BigInt(Math.round(parsedAmount * 10 ** inToken.decimals));
+        const amountOut = await quoteRoute(route, amountInAtomic);
+        const amountOutFormatted = Number(amountOut) / 10 ** outToken.decimals;
 
         res.json({
-            tokenIn: upperIn,
-            tokenOut: upperOut,
+            tokenIn: inToken.symbol,
+            tokenOut: outToken.symbol,
             amountIn: parsedAmount.toString(),
             amountOut: amountOutFormatted.toFixed(6),
             price: (amountOutFormatted / parsedAmount).toFixed(6),
-            router: 'Uniswap V2',
+            route: routeFeesLabel(route),
+            router: 'Uniswap V3',
             network: 'robinhood-chain',
             chainId: 4663,
             timestamp: new Date().toISOString(),
@@ -1019,43 +1201,38 @@ router.get('/quote/:tokenIn/:tokenOut/:amountIn', async (req, res) => {
     }
 });
 
-// ─── Paid Endpoint: Pool (Uniswap V2 WETH/USDG liquidity) ──────────────
+// ─── Paid Endpoint: Pool (Uniswap V3 liquidity for a token pair) ───────
 router.get('/pool/:tokenA/:tokenB', async (req, res) => {
     try {
         const { tokenA, tokenB } = req.params;
-        const pairKey = [tokenA.toUpperCase(), tokenB.toUpperCase()].sort().join('/');
-        if (pairKey !== 'ETH/USDG') {
-            return res.status(400).json({
-                error: `Unsupported pair: ${tokenA}/${tokenB}`,
-                hint: 'Only the ETH/USDG pool is tracked right now.',
-            });
+        const [t0, t1] = await Promise.all([resolveToken(tokenA), resolveToken(tokenB)]);
+        const best = await findBestPool(t0.address, t1.address);
+        if (!best) {
+            return res.status(404).json({ error: `No Uniswap V3 pool with liquidity found for ${t0.symbol}/${t1.symbol}` });
         }
 
-        const paddedWeth = padAddress(WETH_CONTRACT);
-        const paddedUsdg = padAddress(USDG_CONTRACT);
-        const getPairSelector = '0xe6a43905';
-        const pairHex = await robinhoodRpc('eth_call', [
-            { to: UNISWAP_V2_FACTORY, data: getPairSelector + paddedWeth + paddedUsdg },
-            'latest',
+        const [slot0, poolToken0, balance0Raw, balance1Raw] = await Promise.all([
+            readContract(best.pool, v3PoolAbi, 'slot0'),
+            readContract(best.pool, v3PoolAbi, 'token0'),
+            readContract(t0.address, erc20Abi, 'balanceOf', [best.pool]),
+            readContract(t1.address, erc20Abi, 'balanceOf', [best.pool]),
         ]);
-        const pairAddress = '0x' + pairHex.slice(-40);
-        if (/^0x0+$/.test(pairAddress)) {
-            return res.status(404).json({ error: 'Pool not found' });
-        }
 
-        const reservesHex = await robinhoodRpc('eth_call', [{ to: pairAddress, data: '0x0902f1ac' }, 'latest']);
-        const hex = reservesHex.slice(2);
-        const reserveWeth = BigInt('0x' + hex.slice(0, 64));
-        const reserveUsdg = BigInt('0x' + hex.slice(64, 128));
-        const wethAmount = Number(reserveWeth) / 1e18;
-        const usdgAmount = Number(reserveUsdg) / 10 ** USDG_DECIMALS;
+        const sqrtPriceX96 = slot0[0];
+        const isT0First = poolToken0.toLowerCase() === t0.address.toLowerCase();
+        const [decimals0, decimals1] = isT0First ? [t0.decimals, t1.decimals] : [t1.decimals, t0.decimals];
+        const rawPrice = (Number(sqrtPriceX96) / 2 ** 96) ** 2; // token1 per token0, atomic units
+        const priceToken1PerToken0 = rawPrice * 10 ** (decimals0 - decimals1);
 
         res.json({
-            pair: 'ETH/USDG',
-            pairAddress,
-            router: 'Uniswap V2',
-            reserves: { ETH: wethAmount.toFixed(6), USDG: usdgAmount.toFixed(2) },
-            impliedPrice: { ETH_in_USDG: (usdgAmount / wethAmount).toFixed(2) },
+            pair: `${t0.symbol}/${t1.symbol}`,
+            pairAddress: best.pool,
+            feeTier: `${best.fee / 10000}%`,
+            router: 'Uniswap V3',
+            reserves: { [t0.symbol]: (Number(balance0Raw) / 10 ** t0.decimals).toFixed(6), [t1.symbol]: (Number(balance1Raw) / 10 ** t1.decimals).toFixed(6) },
+            impliedPrice: isT0First
+                ? { [`${t0.symbol}_in_${t1.symbol}`]: priceToken1PerToken0.toFixed(6) }
+                : { [`${t1.symbol}_in_${t0.symbol}`]: priceToken1PerToken0.toFixed(6) },
             network: 'robinhood-chain',
             chainId: 4663,
             timestamp: new Date().toISOString(),
@@ -1063,6 +1240,242 @@ router.get('/pool/:tokenA/:tokenB', async (req, res) => {
     } catch (err) {
         console.error('Pool lookup error:', err.message);
         res.status(500).json({ error: 'Failed to fetch pool info', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Liquidity add (mint a Uniswap V3 position) ─────────
+// Custom-range by design: rangePct sets how tight the band is around the
+// current price (e.g. 5 = +-5%). Tighter ranges earn more fees per dollar of
+// capital but go out-of-range (and stop earning) faster if price moves.
+router.post('/liquidity/add', async (req, res) => {
+    try {
+        const { tokenA, tokenB, amountA, amountB, from, rangePct } = req.body;
+        if (!tokenA || !tokenB || !amountA || !amountB || !from) {
+            return res.status(400).json({ error: 'tokenA, tokenB, amountA, amountB, and from (your wallet address) are required' });
+        }
+        if (!/^0x[0-9a-fA-F]{40}$/.test(from)) {
+            return res.status(400).json({ error: 'Invalid from address' });
+        }
+        const parsedA = parseFloat(amountA);
+        const parsedB = parseFloat(amountB);
+        if (isNaN(parsedA) || parsedA <= 0 || isNaN(parsedB) || parsedB <= 0) {
+            return res.status(400).json({ error: 'amountA and amountB must be positive numbers' });
+        }
+        const pct = rangePct !== undefined ? Number(rangePct) : 10;
+        if (isNaN(pct) || pct <= 0 || pct >= 100) {
+            return res.status(400).json({ error: 'rangePct must be a number between 0 and 100 (exclusive)' });
+        }
+
+        const [t0, t1] = await Promise.all([resolveToken(tokenA), resolveToken(tokenB)]);
+        if (t0.address.toLowerCase() === t1.address.toLowerCase()) {
+            return res.status(400).json({ error: 'tokenA and tokenB resolve to the same token' });
+        }
+        const best = await findBestPool(t0.address, t1.address);
+        if (!best) {
+            return res.status(404).json({ error: `No Uniswap V3 pool with liquidity found for ${t0.symbol}/${t1.symbol}` });
+        }
+
+        const [slot0, poolToken0, tickSpacing] = await Promise.all([
+            readContract(best.pool, v3PoolAbi, 'slot0'),
+            readContract(best.pool, v3PoolAbi, 'token0'),
+            readContract(best.pool, v3PoolAbi, 'tickSpacing'),
+        ]);
+        const currentTick = slot0[1];
+        const spacing = Number(tickSpacing);
+        const isT0First = poolToken0.toLowerCase() === t0.address.toLowerCase();
+        const [token0, token1, decimals0, decimals1] = isT0First ? [t0.address, t1.address, t0.decimals, t1.decimals] : [t1.address, t0.address, t1.decimals, t0.decimals];
+        const [amount0, amount1] = isT0First ? [parsedA, parsedB] : [parsedB, parsedA];
+        // At most one side can be native ETH (tokenA/tokenB already rejected if equal), since 'ETH'
+        // always resolves to the WETH address. That side must be paid via msg.value, not transferFrom —
+        // the position manager wraps ETH internally (like SwapRouter02) only when it holds enough of its
+        // own native balance; otherwise it tries an ERC20 pull that reverts with "STF" (no WETH balance).
+        const nativeIsToken0 = t0.isNative ? isT0First : t1.isNative ? !isT0First : false;
+        const nativeIsToken1 = t0.isNative ? !isT0First : t1.isNative ? isT0First : false;
+
+        // 1.0001^tick = price -> a +-pct% price band is +-log(1 +- pct/100) / log(1.0001) ticks.
+        const tickDelta = Math.round(Math.log(1 + pct / 100) / Math.log(1.0001));
+        let tickLower = Math.floor((Number(currentTick) - tickDelta) / spacing) * spacing;
+        let tickUpper = Math.ceil((Number(currentTick) + tickDelta) / spacing) * spacing;
+        tickLower = Math.max(tickLower, Math.ceil(MIN_TICK / spacing) * spacing);
+        tickUpper = Math.min(tickUpper, Math.floor(MAX_TICK / spacing) * spacing);
+
+        const amount0Desired = BigInt(Math.round(amount0 * 10 ** decimals0));
+        const amount1Desired = BigInt(Math.round(amount1 * 10 ** decimals1));
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+
+        const mintCalldata = encodeFunctionData({
+            abi: v3PositionManagerAbi, functionName: 'mint',
+            args: [{
+                token0, token1, fee: best.fee, tickLower, tickUpper,
+                amount0Desired, amount1Desired, amount0Min: 0n, amount1Min: 0n,
+                recipient: from, deadline,
+            }],
+        });
+
+        const steps = [];
+        let mintValue = 0n;
+        if (!nativeIsToken0) {
+            const approve0 = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [UNISWAP_V3_POSITION_MANAGER, amount0Desired] });
+            steps.push({ tx: { to: token0, value: '0x0', data: approve0, chainId: 4663 }, note: 'Approve the position manager to spend token0.' });
+        } else {
+            mintValue = amount0Desired;
+        }
+        if (!nativeIsToken1) {
+            const approve1 = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [UNISWAP_V3_POSITION_MANAGER, amount1Desired] });
+            steps.push({ tx: { to: token1, value: '0x0', data: approve1, chainId: 4663 }, note: 'Approve the position manager to spend token1.' });
+        } else {
+            mintValue = amount1Desired;
+        }
+
+        if (mintValue > 0n) {
+            // Bundle mint + refundETH so any unused ETH (the mint only wraps what the chosen
+            // price range actually needs, not necessarily the full amount sent) comes back to the caller.
+            const refundCalldata = encodeFunctionData({ abi: v3PositionManagerAbi, functionName: 'refundETH' });
+            const multicallData = encodeFunctionData({ abi: v3PositionManagerAbi, functionName: 'multicall', args: [[mintCalldata, refundCalldata]] });
+            steps.push({ tx: { to: UNISWAP_V3_POSITION_MANAGER, value: '0x' + mintValue.toString(16), data: multicallData, chainId: 4663 }, note: 'Mint the position (wrapping ETH as needed) and refund any unused ETH. Broadcast only after the approval above confirms.' });
+        } else {
+            steps.push({ tx: { to: UNISWAP_V3_POSITION_MANAGER, value: '0x0', data: mintCalldata, chainId: 4663 }, note: 'Mint the position. Broadcast only after both approvals confirm.' });
+        }
+
+        res.json({
+            steps,
+            position: {
+                pair: `${t0.symbol}/${t1.symbol}`,
+                feeTier: `${best.fee / 10000}%`,
+                rangePct: pct,
+                tickLower,
+                tickUpper,
+                currentTick: Number(currentTick),
+                amountA: parsedA.toString(),
+                amountB: parsedB.toString(),
+            },
+            router: 'Uniswap V3',
+            network: 'robinhood-chain',
+            note: 'Sign and broadcast each transaction in order. The position NFT (tokenId) is minted to your address in the last step; read it off that transaction\'s receipt/logs.',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Liquidity add error:', err.message);
+        res.status(500).json({ error: 'Failed to construct liquidity-add transaction', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Liquidity remove (withdraw a Uniswap V3 position) ──
+router.post('/liquidity/remove', async (req, res) => {
+    try {
+        const { tokenId, from, burn } = req.body;
+        if (!tokenId || !from) {
+            return res.status(400).json({ error: 'tokenId and from (your wallet address) are required' });
+        }
+        if (!/^0x[0-9a-fA-F]{40}$/.test(from)) {
+            return res.status(400).json({ error: 'Invalid from address' });
+        }
+
+        const tokenIdBig = BigInt(tokenId);
+        const [owner, position] = await Promise.all([
+            readContract(UNISWAP_V3_POSITION_MANAGER, v3PositionManagerAbi, 'ownerOf', [tokenIdBig]),
+            readContract(UNISWAP_V3_POSITION_MANAGER, v3PositionManagerAbi, 'positions', [tokenIdBig]),
+        ]);
+        if (owner.toLowerCase() !== from.toLowerCase()) {
+            return res.status(403).json({ error: `Position ${tokenId} is not owned by ${from}` });
+        }
+        const liquidity = position[7];
+        if (liquidity === 0n) {
+            return res.status(400).json({ error: `Position ${tokenId} already has zero liquidity; nothing to remove` });
+        }
+
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+        const decreaseCalldata = encodeFunctionData({
+            abi: v3PositionManagerAbi, functionName: 'decreaseLiquidity',
+            args: [{ tokenId: tokenIdBig, liquidity, amount0Min: 0n, amount1Min: 0n, deadline }],
+        });
+
+        const token0 = position[2];
+        const token1 = position[3];
+        const involvesWeth = token0.toLowerCase() === WETH_CONTRACT.toLowerCase() || token1.toLowerCase() === WETH_CONTRACT.toLowerCase();
+        const otherToken = token0.toLowerCase() === WETH_CONTRACT.toLowerCase() ? token1 : token0;
+
+        const steps = [
+            { tx: { to: UNISWAP_V3_POSITION_MANAGER, value: '0x0', data: decreaseCalldata, chainId: 4663 }, note: 'Withdraw all liquidity from the position back into it, uncollected.' },
+        ];
+
+        if (!involvesWeth) {
+            const collectCalldata = encodeFunctionData({
+                abi: v3PositionManagerAbi, functionName: 'collect',
+                args: [{ tokenId: tokenIdBig, recipient: from, amount0Max: 2n ** 128n - 1n, amount1Max: 2n ** 128n - 1n }],
+            });
+            steps.push({ tx: { to: UNISWAP_V3_POSITION_MANAGER, value: '0x0', data: collectCalldata, chainId: 4663 }, note: 'Collect the withdrawn tokens (plus any accrued fees) to your wallet.' });
+        } else {
+            // Route the collected WETH leg through this contract, then unwrap it to native ETH and
+            // sweep the other token out — collect() alone would leave you holding WETH, not ETH.
+            const collectToRouter = encodeFunctionData({
+                abi: v3PositionManagerAbi, functionName: 'collect',
+                args: [{ tokenId: tokenIdBig, recipient: V3_ADDRESS_THIS, amount0Max: 2n ** 128n - 1n, amount1Max: 2n ** 128n - 1n }],
+            });
+            const unwrapCalldata = encodeFunctionData({ abi: v3PositionManagerAbi, functionName: 'unwrapWETH9', args: [0n, from] });
+            const sweepCalldata = encodeFunctionData({ abi: v3PositionManagerAbi, functionName: 'sweepToken', args: [otherToken, 0n, from] });
+            const multicallData = encodeFunctionData({ abi: v3PositionManagerAbi, functionName: 'multicall', args: [[collectToRouter, unwrapCalldata, sweepCalldata]] });
+            steps.push({ tx: { to: UNISWAP_V3_POSITION_MANAGER, value: '0x0', data: multicallData, chainId: 4663 }, note: 'Collect, unwrap the WETH leg to native ETH, and sweep the other token to your wallet.' });
+        }
+
+        if (burn) {
+            const burnCalldata = encodeFunctionData({ abi: v3PositionManagerAbi, functionName: 'burn', args: [tokenIdBig] });
+            steps.push({ tx: { to: UNISWAP_V3_POSITION_MANAGER, value: '0x0', data: burnCalldata, chainId: 4663 }, note: 'Burn the now-empty position NFT.' });
+        }
+
+        res.json({
+            tokenId: tokenId.toString(),
+            token0: position[2],
+            token1: position[3],
+            feeTier: `${position[4] / 10000}%`,
+            steps,
+            router: 'Uniswap V3',
+            network: 'robinhood-chain',
+            note: 'Sign and broadcast each transaction in order.',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Liquidity remove error:', err.message);
+        res.status(500).json({ error: 'Failed to construct liquidity-remove transaction', details: err.message });
+    }
+});
+
+// ─── Paid Endpoint: Liquidity positions (enumerate an address's V3 NFTs) ─
+router.get('/liquidity/positions/:address', async (req, res) => {
+    try {
+        const { address } = req.params;
+        if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+            return res.status(400).json({ error: 'Invalid address' });
+        }
+
+        const balance = await readContract(UNISWAP_V3_POSITION_MANAGER, v3PositionManagerAbi, 'balanceOf', [address]);
+        const tokenIds = await Promise.all(
+            Array.from({ length: Number(balance) }, (_, i) => readContract(UNISWAP_V3_POSITION_MANAGER, v3PositionManagerAbi, 'tokenOfOwnerByIndex', [address, BigInt(i)])),
+        );
+        const positions = await Promise.all(tokenIds.map((id) => readContract(UNISWAP_V3_POSITION_MANAGER, v3PositionManagerAbi, 'positions', [id])));
+
+        res.json({
+            address,
+            count: positions.length,
+            positions: positions.map((p, i) => ({
+                tokenId: tokenIds[i].toString(),
+                token0: p[2],
+                token1: p[3],
+                feeTier: `${p[4] / 10000}%`,
+                tickLower: p[5],
+                tickUpper: p[6],
+                liquidity: p[7].toString(),
+                tokensOwed0: p[10].toString(),
+                tokensOwed1: p[11].toString(),
+            })),
+            router: 'Uniswap V3',
+            network: 'robinhood-chain',
+            chainId: 4663,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        console.error('Liquidity positions lookup error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch liquidity positions', details: err.message });
     }
 });
 
@@ -1311,11 +1724,30 @@ const REQUEST_BODIES = {
     'POST /trade': {
         required: true,
         content: { 'application/json': { schema: { type: 'object', required: ['tokenIn', 'tokenOut', 'amountIn', 'from'], properties: {
-            tokenIn: { type: 'string', enum: ['ETH', 'USDG'] },
-            tokenOut: { type: 'string', enum: ['ETH', 'USDG'] },
+            tokenIn: { type: 'string', description: '"ETH", "USDG", or any ERC20 token address on Robinhood Chain' },
+            tokenOut: { type: 'string', description: '"ETH", "USDG", or any ERC20 token address on Robinhood Chain' },
             amountIn: { type: 'string', description: 'Human-readable amount of tokenIn' },
             from: { type: 'string', description: 'Your wallet address (receives the swap output)' },
             slippageBps: { type: 'number', description: 'Optional slippage tolerance in basis points, default 100 (1%)' },
+        } } } },
+    },
+    'POST /liquidity/add': {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['tokenA', 'tokenB', 'amountA', 'amountB', 'from'], properties: {
+            tokenA: { type: 'string', description: '"ETH", "USDG", or any ERC20 token address' },
+            tokenB: { type: 'string', description: '"ETH", "USDG", or any ERC20 token address' },
+            amountA: { type: 'string', description: 'Human-readable max amount of tokenA to deposit' },
+            amountB: { type: 'string', description: 'Human-readable max amount of tokenB to deposit' },
+            from: { type: 'string', description: 'Your wallet address (receives the position NFT)' },
+            rangePct: { type: 'number', description: 'Optional price band width in percent around the current price, default 10 (i.e. +-10%)' },
+        } } } },
+    },
+    'POST /liquidity/remove': {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['tokenId', 'from'], properties: {
+            tokenId: { type: 'string', description: 'The Uniswap V3 position NFT tokenId, from /liquidity/add or /liquidity/positions' },
+            from: { type: 'string', description: 'Your wallet address (must own the position)' },
+            burn: { type: 'boolean', description: 'Optional: also burn the now-empty position NFT, default false' },
         } } } },
     },
 };
