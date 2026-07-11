@@ -13,7 +13,7 @@ const PinionToken: React.FC<PinionTokenProps> = (props) => {
             left={120}
             width={width}
             height={height}
-            windowTitle="$r0x — DEX Screener"
+            windowTitle="$r0x"
             windowBarIcon="pinionTokenIcon"
             windowBarColor="#0d0d0d"
             closeWindow={props.onClose}
@@ -21,16 +21,12 @@ const PinionToken: React.FC<PinionTokenProps> = (props) => {
             minimizeWindow={props.onMinimize}
             onWidthChange={setWidth}
             onHeightChange={setHeight}
-            bottomLeftText="dexscreener.com"
         >
             <div style={styles.container}>
-                <iframe
-                    src="https://dexscreener.com/robinhood/0x5c46b4b4f62c91980a8f4008cd82d32921e786e2?embed=1&theme=dark&trades=0&info=0"
-                    title="$r0x DEX Screener"
-                    width="100%"
-                    height="100%"
-                    style={styles.iframe}
-                />
+                <div style={styles.fallback}>
+                    <p style={styles.fallbackTitle}>$r0x</p>
+                    <p style={styles.fallbackSubtitle}>Live on Uniswap V3, Robinhood Chain.</p>
+                </div>
             </div>
         </Window>
     );
@@ -42,8 +38,22 @@ const styles: StyleSheetCSS = {
         backgroundColor: '#0d0d0d',
         overflow: 'hidden',
     },
-    iframe: {
-        border: 'none',
+    fallback: {
+        flex: 1,
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+    },
+    fallbackTitle: {
+        fontFamily: 'monospace',
+        fontSize: 14,
+        color: '#CEF506',
+    },
+    fallbackSubtitle: {
+        fontFamily: 'monospace',
+        fontSize: 12,
+        color: '#ccc',
     },
 };
 
