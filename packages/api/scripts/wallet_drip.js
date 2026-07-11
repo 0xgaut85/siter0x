@@ -86,12 +86,19 @@ async function usdgBalance(address) {
     return BigInt(hex);
 }
 
+// Only endpoints verified to settle and return 200 with no wallet-side ETH/gas
+// needed (payer only ever signs an off-chain EIP-3009 authorization).
 function endpointsFor(addr) {
     return [
         `${BASE_URL}/skill/price/ETH`,
+        `${BASE_URL}/skill/price/USDG`,
         `${BASE_URL}/skill/wallet/generate`,
         `${BASE_URL}/skill/balance/${addr}`,
         `${BASE_URL}/skill/fund/${addr}`,
+        `${BASE_URL}/skill/quote/ETH/USDG/0.01`,
+        `${BASE_URL}/skill/pool/ETH/USDG`,
+        `${BASE_URL}/skill/yield/usdg`,
+        `${BASE_URL}/skill/liquidity/positions/${addr}`,
     ];
 }
 
