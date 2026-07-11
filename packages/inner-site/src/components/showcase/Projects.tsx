@@ -53,42 +53,43 @@ const Integrations: React.FC<IntegrationsProps> = (props) => {
     return (
         <div className="site-page-content">
             <h1>Integrations</h1>
-            <h3>What Pinion Runs On</h3>
+            <h3>What r0x Runs On</h3>
             <br />
             <p>
-                Pinion is built on top of real protocols that are live in
-                production today. OpenClaw defines how skills are packaged
-                and discovered. x402 handles payment at the HTTP layer.
-                ERC-8004 is next on the roadmap for on-chain agent identity.
+                r0x is built on top of real protocols that are live in
+                production today, all settling in <b>USDG on Robinhood
+                Chain</b>. Every capability is a plain HTTP skill. x402
+                handles payment at the HTTP layer. ERC-8004 is next on the
+                roadmap for on-chain agent identity.
             </p>
             <br />
             <div style={styles.integrationLinksContainer}>
                 <IntegrationBox
                     badge="EXECUTION"
-                    title="OpenClaw"
+                    title="r0x Skills"
                     subtitle="SKILL FORMAT"
-                    description="Our endpoints follow the OpenClaw skill spec. Each skill has a manifest, a price and a handler. The full catalog is browsable at /skill/catalog."
-                    route="openclaw"
+                    description="Each skill has a manifest, a price and a handler. The full catalog is browsable at /skill/catalog."
+                    route="skills"
                 />
                 <IntegrationBox
                     badge="PAYMENT"
                     title="x402"
                     subtitle="HTTP 402 PAYMENTS"
-                    description="Every skill call is paywalled with x402-express middleware. Clients sign an EIP-3009 USDC transfer on Base and retry with the X-PAYMENT header. $0.01 per call."
+                    description="Every skill call is paywalled with a self-hosted x402 v2 facilitator. Clients sign an EIP-3009 USDG transfer on Robinhood Chain and retry with the PAYMENT-SIGNATURE header. $0.01 per call."
                     route="x402"
                 />
                 <IntegrationBox
                     badge="SDK"
-                    title="Pinion OS"
+                    title="r0x OS"
                     subtitle="NPM PACKAGE + CLAUDE PLUGIN"
-                    description="TypeScript SDK and Claude Code plugin. Handles x402 payment signing, wallet setup and all eight skills out of the box. Install via npm install pinion-os or /plugin marketplace add chu2bard/pinion-os."
-                    route="openclaw"
+                    description="TypeScript SDK and Claude Code plugin. Handles x402 payment signing, wallet setup and all eight skills out of the box. Install via npm install r0x-os or /plugin marketplace add nhevers/project-r0x."
+                    route="skills"
                 />
                 <IntegrationBox
                     badge="ROADMAP"
                     title="ERC-8004"
                     subtitle="AGENT IDENTITY"
-                    description="On-chain identity and trust scoring for autonomous agents. Not yet in production. Planned to complement the existing x402 + OpenClaw stack."
+                    description="On-chain identity and trust scoring for autonomous agents. Not yet in production. Planned to complement the existing x402 + skill stack."
                     route="erc8004"
                 />
             </div>
@@ -121,12 +122,12 @@ const styles: StyleSheetCSS = {
         marginBottom: 12,
     },
     badge: {
-        backgroundColor: '#E8530E',
+        backgroundColor: '#CEF506',
         padding: '4px 10px',
         marginRight: 16,
     },
     badgeText: {
-        color: '#fff',
+        color: '#1F1B10',
         fontSize: 10,
         letterSpacing: 2,
         fontWeight: 'bold',

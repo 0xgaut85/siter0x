@@ -13,10 +13,10 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
     {
-        label: 'pinion OS',
+        label: 'r0x OS',
         children: [
-            { label: 'GitHub', href: 'https://github.com/chu2bard/pinion-os' },
-            { label: 'X/Twitter', href: 'https://x.com/PinionOS' },
+            { label: 'GitHub', href: 'https://github.com/nhevers/project-r0x' },
+            { label: 'X/Twitter', href: 'https://x.com/projectR0X' },
             { label: 'Community', href: '#' },
             { label: 'Docs', href: '/os/' },
             { label: 'x402 Server', href: 'https://www.x402scan.com/server/49a688db-0234-4609-948c-c3eee1719e5d' },
@@ -51,7 +51,7 @@ const Navbar: React.FC<NavbarProps> = ({ visible }) => {
                 <div style={styles.menuContent}>
                     {/* Logo */}
                     <a href="/" style={styles.logoLink}>
-                        <img src="/logo.svg" alt="pinion" style={styles.logoImg} />
+                        <img src="/logo.svg" alt="r0x" style={styles.logoImg} />
                     </a>
 
                     {/* Burger button */}
@@ -346,7 +346,7 @@ const styles: StyleSheetCSS = {
         padding: 0,
         border: 'none',
         borderRadius: 24,
-        backgroundColor: '#FF5841',
+        backgroundColor: '#CEF506',
         cursor: 'pointer',
         outline: 'none',
         pointerEvents: 'auto',
@@ -363,14 +363,14 @@ const styles: StyleSheetCSS = {
     burgerLine1: {
         width: 24,
         height: 2,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#1F1B10',
         borderRadius: 1,
         transformOrigin: 'center',
     },
     burgerLine2: {
         width: 24,
         height: 2,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#1F1B10',
         borderRadius: 1,
         alignSelf: 'flex-end',
         transformOrigin: 'center',
@@ -389,7 +389,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Space Mono', monospace",
         fontSize: 12,
         fontWeight: 400,
-        color: '#FFFFFF',
+        color: '#1F1B10',
         letterSpacing: -0.24,
     },
     burgerLabelClose: {
@@ -460,7 +460,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 48,
         fontWeight: 400,
-        color: '#202020',
+        color: '#1F1B10',
         textDecoration: 'none',
         lineHeight: '56px',
         cursor: 'pointer',
@@ -479,7 +479,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 48,
         fontWeight: 400,
-        color: '#202020',
+        color: '#1F1B10',
         cursor: 'pointer',
         lineHeight: '56px',
         outline: 'none',
@@ -488,14 +488,14 @@ const styles: StyleSheetCSS = {
     submenuCount: {
         fontFamily: "'Space Mono', monospace",
         fontSize: 14,
-        color: '#202020',
+        color: '#1F1B10',
         verticalAlign: 'super',
         marginLeft: 2,
     },
     expandArrow: {
         display: 'inline-block',
         fontSize: 32,
-        color: '#202020',
+        color: '#1F1B10',
         marginLeft: 8,
         lineHeight: 1,
     },
@@ -513,7 +513,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 24,
         fontWeight: 400,
-        color: '#202020',
+        color: '#1F1B10',
         textDecoration: 'none',
         paddingLeft: 32,
         lineHeight: '32px',
@@ -524,7 +524,7 @@ const styles: StyleSheetCSS = {
         display: 'inline-block',
         marginRight: 8,
         fontSize: 18,
-        color: '#202020',
+        color: '#1F1B10',
     },
 
     /* --- Panel close button --- */
@@ -535,7 +535,7 @@ const styles: StyleSheetCSS = {
         width: 40,
         height: 40,
         borderRadius: '50%',
-        border: '1.5px solid #202020',
+        border: '1.5px solid #1F1B10',
         background: 'none',
         cursor: 'pointer',
         outline: 'none',
@@ -548,7 +548,7 @@ const styles: StyleSheetCSS = {
     },
     panelCloseIcon: {
         fontSize: 22,
-        color: '#202020',
+        color: '#1F1B10',
         lineHeight: 1,
         fontFamily: "'Inter', sans-serif",
         fontWeight: 300,

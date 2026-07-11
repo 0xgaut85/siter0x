@@ -5,8 +5,10 @@ export interface ConnectWalletProps extends WindowAppProps {
     onWalletChange?: (address: string | null) => void;
 }
 
-const BASE_CHAIN_ID = '0x2105'; // 8453
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const ROBINHOOD_CHAIN_ID = '0x1237'; // 4663
+// USDG (Global Dollar) — verified on-chain: name "Global Dollar", 6 decimals, EIP-712 version "1"
+const USDG_ADDRESS = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
+const USDG_DECIMALS = 6;
 
 // Minimal ERC-20 balanceOf ABI encoded: balanceOf(address)
 const encodeBalanceOf = (address: string): string => {
@@ -22,13 +24,12 @@ const formatEth = (weiHex: string): string => {
     return eth.toFixed(4);
 };
 
-const formatUsdc = (rawHex: string): string => {
-    // USDC has 6 decimals
+const formatUsdg = (rawHex: string): string => {
     const raw = BigInt(rawHex);
-    const usdc = Number(raw) / 1e6;
-    if (usdc === 0) return '0';
-    if (usdc < 0.01) return '<0.01';
-    return usdc.toFixed(2);
+    const usdg = Number(raw) / 10 ** USDG_DECIMALS;
+    if (usdg === 0) return '0';
+    if (usdg < 0.01) return '<0.01';
+    return usdg.toFixed(2);
 };
 
 const truncateAddress = (addr: string): string => {
@@ -38,7 +39,7 @@ const truncateAddress = (addr: string): string => {
 const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
     const [address, setAddress] = useState<string | null>(null);
     const [ethBalance, setEthBalance] = useState<string | null>(null);
-    const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+    const [usdgBalance, setUsdgBalance] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
     const [chainId, setChainId] = useState<string | null>(null);
@@ -59,31 +60,31 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
             });
             setEthBalance(formatEth(ethHex));
 
-            // USDC balance via ERC-20 balanceOf
-            const usdcHex = await provider.request({
+            // USDG balance via ERC-20 balanceOf
+            const usdgHex = await provider.request({
                 method: 'eth_call',
                 params: [
                     {
-                        to: USDC_ADDRESS,
+                        to: USDG_ADDRESS,
                         data: encodeBalanceOf(addr),
                     },
                     'latest',
                 ],
             });
-            setUsdcBalance(formatUsdc(usdcHex));
+            setUsdgBalance(formatUsdg(usdgHex));
         } catch (err: any) {
             console.error('balance fetch error:', err);
         }
     }, []);
 
-    const switchToBase = useCallback(async () => {
+    const switchToRobinhoodChain = useCallback(async () => {
         const provider = getProvider();
         if (!provider) return;
 
         try {
             await provider.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId: BASE_CHAIN_ID }],
+                params: [{ chainId: ROBINHOOD_CHAIN_ID }],
             });
         } catch (switchError: any) {
             // Chain not added - try adding it
@@ -93,20 +94,20 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
                         method: 'wallet_addEthereumChain',
                         params: [
                             {
-                                chainId: BASE_CHAIN_ID,
-                                chainName: 'Base',
+                                chainId: ROBINHOOD_CHAIN_ID,
+                                chainName: 'Robinhood Chain',
                                 nativeCurrency: {
                                     name: 'Ether',
                                     symbol: 'ETH',
                                     decimals: 18,
                                 },
-                                rpcUrls: ['https://mainnet.base.org'],
-                                blockExplorerUrls: ['https://basescan.org'],
+                                rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
+                                blockExplorerUrls: ['https://robinhoodchain.blockscout.com'],
                             },
                         ],
                     });
                 } catch (addError: any) {
-                    setError('failed to add Base network');
+                    setError('failed to add Robinhood Chain network');
                 }
             }
         }
@@ -132,8 +133,8 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
                 setAddress(addr);
                 props.onWalletChange?.(addr);
 
-                // Switch to Base
-                await switchToBase();
+                // Switch to Robinhood Chain
+                await switchToRobinhoodChain();
 
                 // Get current chain
                 const currentChain = await provider.request({
@@ -153,12 +154,12 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
         } finally {
             setIsConnecting(false);
         }
-    }, [switchToBase, fetchBalances, props]);
+    }, [switchToRobinhoodChain, fetchBalances, props]);
 
     const disconnect = useCallback(() => {
         setAddress(null);
         setEthBalance(null);
-        setUsdcBalance(null);
+        setUsdgBalance(null);
         setChainId(null);
         setError(null);
         props.onWalletChange?.(null);
@@ -202,7 +203,7 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
         };
     }, [address, disconnect, fetchBalances, props]);
 
-    const isOnBase = chainId === BASE_CHAIN_ID;
+    const isOnRobinhoodChain = chainId === ROBINHOOD_CHAIN_ID;
 
     return (
         <Window
@@ -265,20 +266,20 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
                                 style={Object.assign(
                                     {},
                                     styles.networkValue,
-                                    isOnBase
-                                        ? styles.networkOnBase
-                                        : styles.networkNotBase
+                                    isOnRobinhoodChain
+                                        ? styles.networkOnChain
+                                        : styles.networkOffChain
                                 )}
                             >
-                                {isOnBase ? 'base' : `chain ${parseInt(chainId || '0', 16)}`}
+                                {isOnRobinhoodChain ? 'robinhood chain' : `chain ${parseInt(chainId || '0', 16)}`}
                             </span>
-                            {!isOnBase && (
+                            {!isOnRobinhoodChain && (
                                 <div
-                                    onMouseDown={switchToBase}
+                                    onMouseDown={switchToRobinhoodChain}
                                     style={styles.switchButton}
                                 >
                                     <span style={styles.switchButtonText}>
-                                        switch to base
+                                        switch network
                                     </span>
                                 </div>
                             )}
@@ -295,11 +296,11 @@ const ConnectWallet: React.FC<ConnectWalletProps> = (props) => {
                             </span>
                         </div>
 
-                        {/* USDC Balance */}
+                        {/* USDG Balance */}
                         <div style={styles.balanceRow}>
-                            <span style={styles.balanceLabel}>USDC</span>
+                            <span style={styles.balanceLabel}>USDG</span>
                             <span style={styles.balanceValue}>
-                                {usdcBalance !== null ? usdcBalance : '...'}
+                                {usdgBalance !== null ? usdgBalance : '...'}
                             </span>
                         </div>
 
@@ -356,7 +357,7 @@ const styles: StyleSheetCSS = {
     walletEmoji: {
         fontSize: 36,
         fontFamily: 'monospace',
-        color: '#E8530E',
+        color: '#CEF506',
     },
     statusText: {
         fontFamily: 'monospace',
@@ -376,14 +377,14 @@ const styles: StyleSheetCSS = {
     },
     connectButton: {
         padding: '10px 28px',
-        border: '1px solid #E8530E',
+        border: '1px solid #CEF506',
         cursor: 'pointer',
-        backgroundColor: '#E8530E',
+        backgroundColor: '#CEF506',
     },
     connectButtonText: {
         fontFamily: 'monospace',
         fontSize: 12,
-        color: '#fff',
+        color: '#1F1B10',
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
@@ -418,7 +419,7 @@ const styles: StyleSheetCSS = {
     addressValue: {
         fontFamily: 'monospace',
         fontSize: 13,
-        color: '#E8530E',
+        color: '#CEF506',
         letterSpacing: 0.5,
     },
     networkRow: {
@@ -439,22 +440,22 @@ const styles: StyleSheetCSS = {
         fontFamily: 'monospace',
         fontSize: 12,
     },
-    networkOnBase: {
+    networkOnChain: {
         color: '#00ff88',
     },
-    networkNotBase: {
+    networkOffChain: {
         color: '#ffaa00',
     },
     switchButton: {
         padding: '2px 8px',
-        border: '1px solid #E8530E',
+        border: '1px solid #CEF506',
         cursor: 'pointer',
         marginLeft: 8,
     },
     switchButtonText: {
         fontFamily: 'monospace',
         fontSize: 9,
-        color: '#E8530E',
+        color: '#CEF506',
         textTransform: 'uppercase',
     },
     divider: {

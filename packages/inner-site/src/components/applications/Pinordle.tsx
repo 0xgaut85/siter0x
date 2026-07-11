@@ -16,7 +16,7 @@ const PinordleApp: React.FC<PinordleAppProps> = (props) => {
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'© 2026 Pinion'}
+            bottomLeftText={'© 2026 r0x'}
         >
             <div className="site-page">
                 <Wordle />

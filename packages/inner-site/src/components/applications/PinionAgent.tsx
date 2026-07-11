@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Window from '../os/Window';
-import { signX402Payment, getApiBase, PaymentRequirements } from '../../utils/x402';
+import { buildPaymentSignatureHeader, getApiBase } from '../../utils/x402';
 
 export interface PinionAgentProps extends WindowAppProps {}
 
@@ -25,7 +25,7 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
         {
             role: 'assistant',
             content:
-                'hey! im the pinion agent. ask me anything about the protocol, how x402 works, openclaw integration, erc-8004 identity stuff... whatever you wanna know 🤙',
+                'hey! im the r0x agent. ask me anything about the protocol, how x402 works, the skill catalog, erc-8004 identity stuff... whatever you wanna know 🤙',
         },
     ]);
     const [input, setInput] = useState('');
@@ -73,7 +73,7 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
         const trimmed = input.trim();
         if (!trimmed || isLoading) return;
         if (!walletAddress) {
-            setError('connect your wallet first to chat ($0.01 USDC per message)');
+            setError('connect your wallet first to chat ($0.01 USDG per message)');
             return;
         }
 
@@ -122,33 +122,18 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
                 throw new Error(`server returned ${initialRes.status}`);
             }
 
-            // Step 2: Parse 402 payment requirements
-            const paymentData = await initialRes.json();
-            const { x402Version, accepts } = paymentData;
-
-            if (!accepts || accepts.length === 0) {
-                throw new Error('no payment requirements returned');
-            }
-
-            const requirement: PaymentRequirements = accepts[0];
-
-            // Step 3: Sign x402 payment
+            // Step 2: Parse the PAYMENT-REQUIRED header and sign the payment
             setPaymentStatus('sign payment in wallet...');
-            const paymentHeader = await signX402Payment(
-                provider,
-                walletAddress,
-                requirement,
-                x402Version
-            );
+            const { header: paymentHeader } = await buildPaymentSignatureHeader(provider, walletAddress, initialRes);
 
-            // Step 4: Retry with X-PAYMENT header
+            // Step 3: Retry with the PAYMENT-SIGNATURE header
             setPaymentStatus('verifying payment...');
             const paidRes = await fetch(chatUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-PAYMENT': paymentHeader,
+                    'PAYMENT-SIGNATURE': paymentHeader,
                 },
                 body: JSON.stringify({ messages: updatedMessages }),
             });
@@ -193,13 +178,13 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
             left={100}
             width={600}
             height={500}
-            windowTitle="Pinion Agent"
+            windowTitle="r0x Agent"
             windowBarIcon="agentIcon"
             windowBarColor="#0d0d0d"
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={walletAddress ? 'x402 gated | $0.01 USDC/msg' : 'connect wallet to chat'}
+            bottomLeftText={walletAddress ? 'x402 gated | $0.01 USDG/msg' : 'connect wallet to chat'}
         >
             <div style={styles.container}>
                 {/* Messages area */}
@@ -262,7 +247,7 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
                     {!walletAddress ? (
                         <div style={styles.walletWarning}>
                             <span style={styles.walletWarningText}>
-                                connect wallet to chat ($0.01 USDC/msg via x402)
+                                connect wallet to chat ($0.01 USDG/msg via x402)
                             </span>
                         </div>
                     ) : (
@@ -274,7 +259,7 @@ const PinionAgent: React.FC<PinionAgentProps> = (props) => {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="ask me anything about pinion..."
+                                placeholder="ask me anything about r0x..."
                                 style={styles.input}
                                 disabled={isLoading}
                             />
@@ -327,7 +312,7 @@ const styles: StyleSheetCSS = {
     agentLabel: {
         fontFamily: 'monospace',
         fontSize: 10,
-        color: '#E8530E',
+        color: '#CEF506',
         letterSpacing: 1,
         textTransform: 'uppercase',
         marginBottom: 2,
@@ -351,7 +336,7 @@ const styles: StyleSheetCSS = {
     typingIndicator: {
         fontFamily: 'monospace',
         fontSize: 12,
-        color: '#E8530E',
+        color: '#CEF506',
         fontStyle: 'italic',
     },
     errorRow: {
@@ -383,7 +368,7 @@ const styles: StyleSheetCSS = {
     prompt: {
         fontFamily: 'monospace',
         fontSize: 14,
-        color: '#E8530E',
+        color: '#CEF506',
         marginRight: 8,
         fontWeight: 'bold',
     },
@@ -399,7 +384,7 @@ const styles: StyleSheetCSS = {
     },
     sendButton: {
         padding: '4px 14px',
-        border: '1px solid #E8530E',
+        border: '1px solid #CEF506',
         cursor: 'pointer',
         marginLeft: 8,
         flexShrink: 0,
@@ -411,7 +396,7 @@ const styles: StyleSheetCSS = {
     sendText: {
         fontFamily: 'monospace',
         fontSize: 11,
-        color: '#E8530E',
+        color: '#CEF506',
         textTransform: 'uppercase',
         letterSpacing: 1,
     },

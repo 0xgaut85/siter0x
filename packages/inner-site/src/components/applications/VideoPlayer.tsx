@@ -149,7 +149,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'Pinion Media Player'}
+            bottomLeftText={'r0x Media Player'}
         >
             <div style={styles.container}>
                 {/* Video area */}
@@ -324,7 +324,7 @@ const styles: StyleSheetCSS = {
         backgroundColor: '#0d0d0d',
     },
     loadingText: {
-        color: '#E8651A',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 14,
         letterSpacing: 2,
@@ -354,7 +354,7 @@ const styles: StyleSheetCSS = {
     },
     progressFill: {
         height: '100%',
-        backgroundColor: '#E8651A',
+        backgroundColor: '#CEF506',
         position: 'absolute',
         top: 0,
         left: 0,
@@ -442,7 +442,7 @@ const styles: StyleSheetCSS = {
     },
     volumeFill: {
         height: '100%',
-        backgroundColor: '#E8651A',
+        backgroundColor: '#CEF506',
         position: 'absolute',
         top: 0,
         left: 0,

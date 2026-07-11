@@ -84,7 +84,7 @@ const iconVars = {
 
 const styles: StyleSheetCSS = {
     container: {
-        background: '#202020',
+        background: '#1F1B10',
         textAlign: 'center',
         display: 'flex',
         boxSizing: 'border-box',

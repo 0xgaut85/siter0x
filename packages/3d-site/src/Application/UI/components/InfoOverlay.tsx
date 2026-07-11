@@ -6,8 +6,8 @@ interface InfoOverlayProps {
     visible: boolean;
 }
 
-const NAME_TEXT = 'pinion';
-const TITLE_TEXT = '';
+const NAME_TEXT = 'r0x';
+const TITLE_TEXT = 'USDG-native OS for AI Agents';
 const MULTIPLIER = 1;
 
 const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
@@ -145,7 +145,7 @@ const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
 
 const styles: StyleSheetCSS = {
     container: {
-        background: '#202020',
+        background: '#1F1B10',
         padding: 4,
         paddingLeft: 16,
         paddingRight: 16,

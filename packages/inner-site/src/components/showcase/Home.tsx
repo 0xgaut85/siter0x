@@ -10,14 +10,15 @@ const Home: React.FC<HomeProps> = (props) => {
     return (
         <div style={styles.page}>
             <div style={styles.header}>
-                <h1 style={styles.name}>pinion</h1>
-                <h2 style={styles.subtitle}>An operating primitive for</h2>
-                <h2 style={styles.subtitle}>paid autonomous software</h2>
+                <h1 style={styles.name}>r0x</h1>
+                <h2 style={styles.subtitle}>The USDG-native operating system</h2>
+                <h2 style={styles.subtitle}>for AI agents</h2>
             </div>
             <div style={styles.tagline}>
                 <p style={styles.taglineText}>
-                    Enabling machines to discover, pay for and execute
-                    capabilities in a single uninterrupted transaction cycle.
+                    Building economic execution infrastructure on Robinhood
+                    Chain. Machines discover, pay for and execute capabilities
+                    in USDG in a single uninterrupted transaction cycle.
                 </p>
             </div>
             <div style={styles.buttons}>
@@ -40,7 +41,8 @@ const Home: React.FC<HomeProps> = (props) => {
             </div>
             <div style={styles.visionContainer}>
                 <p style={styles.visionHighlight}>
-                    The execution primitive for machine-to-machine commerce.
+                    USDG-native economic execution for machine-to-machine
+                    commerce on Robinhood Chain.
                 </p>
             </div>
         </div>
@@ -93,7 +95,7 @@ const styles: StyleSheetCSS = {
     visionHighlight: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#E8530E',
+        color: '#1F1B10',
     },
     name: {
         fontSize: 72,

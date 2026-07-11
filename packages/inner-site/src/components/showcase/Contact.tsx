@@ -12,7 +12,7 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                         <h1>Developers</h1>
                     </div>
                     <div style={styles.headerRow}>
-                        <h3>Build with Pinion &amp; x402</h3>
+                        <h3>The USDG-Native OS for AI Agents</h3>
                     </div>
                 </div>
             </div>
@@ -22,21 +22,23 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 <h2>Getting Started</h2>
                 <br />
                 <p>
-                    Pinion exposes on-chain intelligence and AI skills as
-                    paywalled HTTP endpoints on <b>Base mainnet</b>.
-                    Every call costs <b>$0.01 USDC</b> and is gated via
-                    the <b>x402</b> protocol. No API keys, no
+                    r0x is building economic execution infrastructure on{' '}
+                    <b>Robinhood Chain</b> (chain ID 4663). We expose
+                    on-chain intelligence and AI skills as paywalled HTTP
+                    endpoints. Every call costs <b>$0.01 USDG</b> and is
+                    gated via the <b>x402</b> protocol. No API keys, no
                     subscriptions. Just a wallet signature per request.
                 </p>
                 <br />
                 <p>
-                    The server uses{' '}
-                    <b>x402-express</b> middleware to enforce payments.
-                    Clients receive a <code style={styles.inlineCode}>402 Payment Required</code>{' '}
-                    response, sign an EIP-3009 <code style={styles.inlineCode}>TransferWithAuthorization</code>,
-                    and retry with the <code style={styles.inlineCode}>X-PAYMENT</code> header.
-                    The facilitator verifies the payment on-chain and forwards the
-                    request to the endpoint.
+                    The server runs a <b>self-hosted facilitator</b> using{' '}
+                    <b>@x402/express</b> middleware (x402 protocol v2) — no third-party
+                    facilitator supports Robinhood Chain yet, so r0x verifies and settles
+                    its own payments in-process. Clients receive a{' '}
+                    <code style={styles.inlineCode}>402 Payment Required</code>{' '}
+                    response with a <code style={styles.inlineCode}>PAYMENT-REQUIRED</code> header,
+                    sign an EIP-3009 <code style={styles.inlineCode}>TransferWithAuthorization</code>,
+                    and retry with the <code style={styles.inlineCode}>PAYMENT-SIGNATURE</code> header.
                 </p>
             </div>
 
@@ -51,9 +53,9 @@ const Developers: React.FC<DevelopersProps> = (props) => {
             <div className="text-block">
                 <p>
                     All endpoints are live at{' '}
-                    <code style={styles.inlineCode}>https://pinionos.com/skill/</code>.
+                    <code style={styles.inlineCode}>https://projectr0x.dev/skill/</code>.
                     Browse the free catalog at{' '}
-                    <a href="https://pinionos.com/skill/catalog" target="_blank" rel="noopener noreferrer" style={styles.link}>
+                    <a href="https://projectr0x.dev/skill/catalog" target="_blank" rel="noopener noreferrer" style={styles.link}>
                         /skill/catalog
                     </a>.
                 </p>
@@ -66,14 +68,14 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                         <span style={{ ...styles.endpointCell, flex: 3 }}>Description</span>
                     </div>
                     {[
-                        { path: '/skill/balance/:address', method: 'GET', desc: 'ETH + USDC balances for any Base address' },
-                        { path: '/skill/tx/:hash', method: 'GET', desc: 'Decoded transaction details for any Base tx' },
-                        { path: '/skill/price/:token', method: 'GET', desc: 'Current USD price for ETH or other tokens' },
-                        { path: '/skill/wallet/generate', method: 'GET', desc: 'Generate a fresh Base wallet keypair' },
-                        { path: '/skill/chat', method: 'POST', desc: 'Chat with the Pinion AI Agent' },
-                        { path: '/skill/send', method: 'POST', desc: 'Construct unsigned ETH or USDC transfer tx' },
-                        { path: '/skill/trade', method: 'POST', desc: 'Unsigned swap tx via 1inch aggregator' },
+                        { path: '/skill/balance/:address', method: 'GET', desc: 'ETH + USDG balances for any Robinhood Chain address' },
+                        { path: '/skill/tx/:hash', method: 'GET', desc: 'Decoded transaction details for any Robinhood Chain tx' },
+                        { path: '/skill/price/:token', method: 'GET', desc: 'Current USD price for ETH or USDG' },
+                        { path: '/skill/wallet/generate', method: 'GET', desc: 'Generate a fresh Robinhood Chain wallet keypair' },
+                        { path: '/skill/chat', method: 'POST', desc: 'Chat with the r0x AI Agent' },
+                        { path: '/skill/send', method: 'POST', desc: 'Construct unsigned ETH or USDG transfer tx' },
                         { path: '/skill/fund/:address', method: 'GET', desc: 'Wallet balance + funding instructions' },
+                        { path: '/skill/broadcast', method: 'POST', desc: 'Sign and broadcast a transaction' },
                     ].map((ep, i) => (
                         <div key={i} style={i % 2 === 0 ? styles.endpointRow : styles.endpointRowAlt}>
                             <code style={{ ...styles.endpointCell, flex: 2.5, fontSize: 10, color: '#00ff88' }}>{ep.path}</code>
@@ -85,56 +87,131 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 </div>
             </div>
 
-            {/* SERVER EXAMPLE */}
+            {/* TRY IT: TEST TRANSACTION */}
             <div style={styles.headerContainer}>
                 <div style={styles.header}>
                     <div style={styles.headerRow}>
-                        <h2>Server: x402-express</h2>
+                        <h2>Try It: Run a Real Test Transaction</h2>
                     </div>
                 </div>
             </div>
             <div className="text-block">
                 <p>
-                    Protect any Express route with a single middleware call.
-                    The facilitator handles on-chain USDC settlement.
+                    Anyone can complete a live payment against r0x's
+                    facilitator right now. All you need is a wallet holding a
+                    small amount of <b>USDG on Robinhood Chain</b> — get some
+                    via{' '}
+                    <a href="https://across.to" target="_blank" rel="noopener noreferrer" style={styles.link}>
+                        Across
+                    </a>{' '}
+                    (bridges USDC from 13 chains and delivers USDG directly)
+                    or see the{' '}
+                    <a href="https://docs.robinhood.com/chain/bridging/" target="_blank" rel="noopener noreferrer" style={styles.link}>
+                        full bridging options
+                    </a>.
+                </p>
+                <br />
+                <p>
+                    The script below signs a real EIP-3009{' '}
+                    <code style={styles.inlineCode}>TransferWithAuthorization</code>{' '}
+                    and lets r0x's self-hosted facilitator verify and settle
+                    it on-chain — the exact same flow described above, no
+                    mocking. It's checked into the repo at{' '}
+                    <code style={styles.inlineCode}>packages/api/scripts/test-transaction.js</code>.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
-{`const express = require('express');
-const { paymentMiddleware } = require('x402-express');
+{`PAYER_PRIVATE_KEY=0xyour-payer-wallet-key \\
+  node packages/api/scripts/test-transaction.js \\
+  https://projectr0x.dev/skill/price/ETH
 
-const app = express();
+# [1/4] Payer wallet: 0x...
+# [1/4] Calling https://projectr0x.dev/skill/price/ETH with no payment...
+# [2/4] Got 402. Price: 10000 atomic units of Global Dollar on eip155:4663
+# [2/4] payTo: 0x101Cd32b9bEEE93845Ead7Bc604a5F1873330acf
+# [3/4] Signing EIP-3009 TransferWithAuthorization...
+# [4/4] Retrying with PAYMENT-SIGNATURE header (this settles on-chain)...
+#
+# ✅ Payment settled.
+# Settlement receipt: { success: true, transaction: '0x...', network: 'eip155:4663' }
+# Response body: { token: 'ETH', usd: 3842.11, ... }`}
+                </pre>
+                <br />
+                <p style={{ opacity: 0.7, fontSize: 12 }}>
+                    The script targets <code style={styles.inlineCode}>/skill/price/ETH</code>{' '}
+                    by default (cheapest endpoint to test with, $0.01) — pass
+                    any live endpoint URL as the first argument. Source: the
+                    same request/sign/retry logic used by the SDK and this
+                    site's own wallet integration.
+                </p>
+            </div>
 
-const payTo   = '0x101C...0acf';       // your USDC receive address
-const network = 'base';
+            {/* SERVER EXAMPLE */}
+            <div style={styles.headerContainer}>
+                <div style={styles.header}>
+                    <div style={styles.headerRow}>
+                        <h2>Server: Self-Hosted Facilitator</h2>
+                    </div>
+                </div>
+            </div>
+            <div className="text-block">
+                <p>
+                    Robinhood Chain is too new for any managed facilitator (Coinbase CDP,
+                    PayAI, etc.), so r0x runs its own using{' '}
+                    <code style={styles.inlineCode}>@x402/core</code>,{' '}
+                    <code style={styles.inlineCode}>@x402/evm</code>, and{' '}
+                    <code style={styles.inlineCode}>@x402/express</code>. A dedicated gas
+                    wallet signs and submits settlement transactions directly.
+                </p>
+                <br />
+                <pre style={styles.codeBlock}>
+{`const { paymentMiddleware } = require('@x402/express');
+const { x402ResourceServer } = require('@x402/core/server');
+const { x402Facilitator } = require('@x402/core/facilitator');
+const { ExactEvmScheme } = require('@x402/evm/exact/server');
+const { registerExactEvmScheme } = require('@x402/evm/exact/facilitator');
+const { toFacilitatorEvmSigner } = require('@x402/evm');
+const { createWalletClient, http, publicActions } = require('viem');
+const { privateKeyToAccount } = require('viem/accounts');
+
+const payTo   = '0x101C...0acf';           // your USDG receive address
+const network = 'eip155:4663';             // Robinhood Chain (CAIP-2)
+
+const gasWallet = privateKeyToAccount(process.env.EVM_PRIVATE_KEY);
+const walletClient = createWalletClient({
+  account: gasWallet, chain: robinhoodChain, transport: http(RPC_URL),
+}).extend(publicActions);
+
+const facilitator = new x402Facilitator();
+registerExactEvmScheme(facilitator, {
+  signer: toFacilitatorEvmSigner({ ...walletClient, address: gasWallet.address }),
+  networks: network,
+});
+const resourceServer = new x402ResourceServer(facilitator)
+  .register(network, new ExactEvmScheme());
 
 app.use(
   paymentMiddleware(
-    payTo,
     {
       'GET /balance/[address]': {
-        price: '$0.01', network,
-        config: { description: 'ETH + USDC balances' },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'ETH + USDG balances',
       },
       'GET /wallet/generate': {
-        price: '$0.01', network,
-        config: { description: 'Generate a Base keypair' },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Generate a Robinhood Chain keypair',
       },
       'POST /send': {
-        price: '$0.01', network,
-        config: { description: 'Construct unsigned transfer tx' },
-      },
-      'POST /trade': {
-        price: '$0.01', network,
-        config: { description: 'Unsigned swap via 1inch' },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Construct unsigned transfer tx',
       },
     },
-    { url: 'https://x402.org/facilitator' },
+    resourceServer,
   )
 );
 
 app.get('/balance/:address', async (req, res) => {
-  // x402 payment already verified at this point
+  // x402 payment already verified + settled at this point
   const balance = await getBalance(req.params.address);
   res.json(balance);
 });
@@ -149,41 +226,50 @@ app.post('/send', async (req, res) => {
 
             {/* CLIENT EXAMPLE */}
             <div className="text-block">
-                <h2>Client: x402 Payment Flow</h2>
+                <h2>Client: x402 v2 Payment Flow</h2>
                 <br />
                 <pre style={styles.codeBlock}>
 {`// 1. Make the initial request
 const res = await fetch(
-  'https://pinionos.com/skill/balance/0x...'
+  'https://projectr0x.dev/skill/balance/0x...'
 );
 
 if (res.status === 402) {
-  // 2. Parse payment requirements from response
-  const requirements = await res.json();
-  const { payTo, maxAmountRequired, asset } = requirements;
+  // 2. Decode the PAYMENT-REQUIRED header (base64 JSON challenge)
+  const paymentRequired = JSON.parse(
+    atob(res.headers.get('PAYMENT-REQUIRED'))
+  );
+  const requirements = paymentRequired.accepts[0];
+  // { scheme: 'exact', network: 'eip155:4663', asset, amount, payTo, ... }
 
   // 3. Sign EIP-3009 TransferWithAuthorization
-  const sig = await ethereum.request({
+  const authorization = {
+    from: walletAddress, to: requirements.payTo,
+    value: requirements.amount, validAfter: '0',
+    validBefore: String(Math.floor(Date.now() / 1000) + requirements.maxTimeoutSeconds),
+    nonce: crypto.randomUUID(),
+  };
+  const signature = await ethereum.request({
     method: 'eth_signTypedData_v4',
-    params: [walletAddress, typedData],
+    params: [walletAddress, JSON.stringify(typedData)],
   });
 
-  // 4. Retry with X-PAYMENT header
+  // 4. Retry with the PAYMENT-SIGNATURE header
   const paid = await fetch(
-    'https://pinionos.com/skill/balance/0x...', {
+    'https://projectr0x.dev/skill/balance/0x...', {
       headers: {
-        'X-PAYMENT': btoa(JSON.stringify({
-          x402Version: 1,
-          scheme: 'exact',
-          network: 'base',
-          payload: { signature: sig, authorization },
+        'PAYMENT-SIGNATURE': btoa(JSON.stringify({
+          x402Version: 2,
+          resource: paymentRequired.resource,
+          accepted: requirements,
+          payload: { authorization, signature },
         })),
       },
     }
   );
 
   const data = await paid.json();
-  // { eth: "0.042", usdc: "12.50" }
+  // { balances: { ETH: "0.042", USDG: "12.50" } }
 }`}
                 </pre>
             </div>
@@ -192,40 +278,38 @@ if (res.status === 402) {
             <div style={styles.headerContainer}>
                 <div style={styles.header}>
                     <div style={styles.headerRow}>
-                        <h2>Pinion OS SDK</h2>
+                        <h2>r0x OS SDK</h2>
                     </div>
                 </div>
             </div>
             <div className="text-block">
                 <p>
-                    The <b>pinion-os</b> npm package handles x402 payment signing
+                    The <b>r0x-os</b> npm package handles x402 payment signing
                     automatically. Instead of building the 402 flow yourself,
                     install the SDK and call skill methods directly.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
-{`npm install pinion-os`}
+{`npm install r0x-os`}
                 </pre>
                 <br />
                 <pre style={styles.codeBlock}>
-{`import { PinionClient } from 'pinion-os';
+{`import { PinionClient } from 'r0x-os';
 
 const client = new PinionClient({
   privateKey: process.env.PINION_PRIVATE_KEY,
 });
 
-// check ETH price ($0.01 USDC per call)
+// check ETH price ($0.01 USDG per call)
 const price = await client.skills.price('ETH');
 
-// send USDC to an address
+// send USDG to an address
 const tx = await client.skills.send(
-  '0xRecipient...', '10', 'USDC'
+  '0xRecipient...', '10', 'USDG'
 );
 
-// swap tokens via 1inch
-const swap = await client.skills.trade(
-  'USDC', 'ETH', '50'
-);`}
+// fetch decoded transaction details
+const tx = await client.skills.tx('0x...');`}
                 </pre>
             </div>
 
@@ -239,21 +323,23 @@ const swap = await client.skills.trade(
             </div>
             <div className="text-block">
                 <p>
-                    Pinion OS ships as a Claude Code plugin. Install it and
+                    r0x OS ships as a Claude Code plugin. Install it and
                     your agent gets access to all eight skills as MCP tools.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
-{`/plugin marketplace add chu2bard/pinion-os
-/plugin install pinion-os`}
+{`/plugin marketplace add nhevers/project-r0x
+/plugin install r0x-os`}
                 </pre>
                 <br />
                 <p>
                     No private key is needed upfront. On first use the agent
                     calls <code style={styles.inlineCode}>pinion_setup</code> to
                     either import an existing wallet or generate a fresh one.
-                    After setup, all ten tools are available: balance, tx, price,
-                    wallet, chat, send, trade, fund, pay_service, and spend_limit.
+                    After setup, all nine tools are available: balance, tx, price,
+                    wallet, chat, send, fund, broadcast, and spend_limit.
+                    (<code style={styles.inlineCode}>trade</code> is temporarily disabled —
+                    no DEX aggregator supports Robinhood Chain yet.)
                 </p>
                 <br />
                 <p>
@@ -261,7 +347,7 @@ const swap = await client.skills.trade(
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
-{`claude mcp add pinion -- npx pinion-os`}
+{`claude mcp add r0x -- npx r0x-os`}
                 </pre>
             </div>
 
@@ -275,7 +361,7 @@ const swap = await client.skills.trade(
             </div>
             <div className="text-block">
                 <p>
-                    Your Pinion agent can pay any web2 service that uses{" "}
+                    Your r0x agent can pay any web2 service that uses{" "}
                     <a href="https://docs.stripe.com/payments/machine/x402" style={styles.link}>
                         Stripe x402
                     </a>{" "}
@@ -285,15 +371,19 @@ const swap = await client.skills.trade(
                 <br />
                 <pre style={styles.codeBlock}>
 {`const result = await payX402Service(
-  pinion.signer,
+  r0x.signer,
   "https://api.example.com/paid-endpoint",
   { method: "GET", maxAmount: "100000" }
 );`}
                 </pre>
                 <br />
                 <p>
-                    The agent pays USDC on Base. Stripe handles settlement on the
-                    server side. No Stripe account needed on the agent side.
+                    Note: this is Stripe's own x402 implementation, which
+                    currently only settles in USDC on Base — a limitation of
+                    Stripe's infrastructure, not r0x's. Everything r0x runs
+                    itself settles in USDG on Robinhood Chain. Stripe handles
+                    settlement server-side; no Stripe account is needed on
+                    the agent side.
                 </p>
             </div>
 
@@ -308,19 +398,19 @@ const swap = await client.skills.trade(
             <div className="text-block">
                 <p>
                     Join the growing community of developers and autonomous
-                    systems building on Pinion.
+                    systems building on r0x.
                 </p>
                 <br />
                 <div style={styles.socialLinks}>
                     <a
-                        href="https://x.com/PinionOS"
+                        href="https://x.com/projectr0x"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={styles.socialLink}
                     >
                         <div style={styles.socialCard}>
                             <h3>X / Twitter</h3>
-                            <p>@PinionOS</p>
+                            <p>@projectr0x</p>
                         </div>
                     </a>
                     <a
@@ -335,14 +425,14 @@ const swap = await client.skills.trade(
                         </div>
                     </a>
                     <a
-                        href="https://github.com/chu2bard/pinion-os"
+                        href="https://github.com/nhevers/project-r0x"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={styles.socialLink}
                     >
                         <div style={styles.socialCard}>
                             <h3>GitHub</h3>
-                            <p>Source code, SDK, and OpenClaw skill</p>
+                            <p>Source code, SDK, and skill API</p>
                         </div>
                     </a>
                 </div>
@@ -387,7 +477,7 @@ const styles: StyleSheetCSS = {
         border: '1px solid #333',
     },
     link: {
-        color: '#E8530E',
+        color: '#1F1B10',
         textDecoration: 'underline',
     },
     endpointTable: {

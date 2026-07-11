@@ -6,7 +6,7 @@ import Window from '../os/Window';
 import Architecture from '../showcase/Experience';
 import Integrations from '../showcase/Projects';
 import Developers from '../showcase/Contact';
-import OpenClawPage from '../showcase/projects/Software';
+import SkillsPage from '../showcase/projects/Skills';
 import X402Page from '../showcase/projects/Music';
 import ERC8004Page from '../showcase/projects/Art';
 import VerticalNavbar from '../showcase/VerticalNavbar';
@@ -23,12 +23,12 @@ const ShowcaseExplorer: React.FC<ShowcaseExplorerProps> = (props) => {
             left={56}
             width={initWidth}
             height={initHeight}
-            windowTitle="PinionOS - Protocol Explorer"
+            windowTitle="r0x OS - Protocol Explorer"
             windowBarIcon="windowExplorerIcon"
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'© 2026 Pinion'}
+            bottomLeftText={'© 2026 r0x'}
         >
             <Router basename={process.env.PUBLIC_URL || '/'}>
                 <div className="site-page">
@@ -40,8 +40,8 @@ const ShowcaseExplorer: React.FC<ShowcaseExplorerProps> = (props) => {
                         <Route path="/integrations" element={<Integrations />} />
                         <Route path="/developers" element={<Developers />} />
                         <Route
-                            path="/integrations/openclaw"
-                            element={<OpenClawPage />}
+                            path="/integrations/skills"
+                            element={<SkillsPage />}
                         />
                         <Route
                             path="/integrations/x402"

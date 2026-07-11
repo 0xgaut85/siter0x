@@ -78,7 +78,7 @@ const styles: StyleSheetCSS = {
     container: {
         position: 'absolute',
         bottom: 80,
-        background: '#202020',
+        background: '#1F1B10',
         padding: 6,
         paddingLeft: 20,
         paddingRight: 20,

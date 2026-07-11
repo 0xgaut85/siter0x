@@ -31,7 +31,7 @@ const VerticalNavbar: React.FC<VerticalNavbarProps> = (props) => {
     return !isHome ? (
         <div style={styles.navbar}>
             <div style={styles.header}>
-                <h1 style={styles.headerText}>pinion</h1>
+                <h1 style={styles.headerText}>r0x</h1>
                 <h3 style={styles.headerShowcase}>Protocol Explorer</h3>
             </div>
             <div style={styles.links}>
@@ -56,8 +56,8 @@ const VerticalNavbar: React.FC<VerticalNavbarProps> = (props) => {
                         <div style={styles.insetLinks}>
                             <Link
                                 containerStyle={styles.insetLink}
-                                to="integrations/openclaw"
-                                text="OPENCLAW"
+                                to="integrations/skills"
+                                text="SKILLS"
                             />
                             <Link
                                 containerStyle={styles.insetLink}

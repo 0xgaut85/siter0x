@@ -16,15 +16,17 @@ const Overview: React.FC<OverviewProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Software is evolving from passive infrastructure into
-                    autonomous execution systems that plan tasks, discover
-                    capabilities, execute workflows and complete outcomes
-                    without continuous human direction.
+                    <b>r0x is the USDG-native operating system for AI agents.</b>{' '}
+                    We're building economic execution infrastructure on{' '}
+                    <b>Robinhood Chain</b> — the layer that lets autonomous
+                    software plan tasks, discover capabilities, execute
+                    workflows and complete outcomes without continuous human
+                    direction.
                 </p>
                 <br />
                 <p>
-                    Despite this shift, one essential primitive is still missing
-                    from the global internet stack:{' '}
+                    Despite the rise of autonomous systems, one essential
+                    primitive is still missing from the global internet stack:{' '}
                     <b>
                         a native way for software to exchange value at the
                         moment of execution.
@@ -32,10 +34,11 @@ const Overview: React.FC<OverviewProps> = (props) => {
                 </p>
                 <br />
                 <p>
-                    Pinion introduces a global operating primitive that allows
-                    machines to discover priced capabilities, authorize payment,
-                    programmatically invoke execution and continue workflows
-                    in a single uninterrupted transaction cycle.
+                    r0x fills that gap. Every capability we expose is priced in{' '}
+                    <b>USDG</b>, settled on Robinhood Chain, and callable by any
+                    machine that can discover it, authorize payment and invoke
+                    execution — all in a single uninterrupted transaction
+                    cycle.
                 </p>
             </div>
 
@@ -76,9 +79,10 @@ const Overview: React.FC<OverviewProps> = (props) => {
                 <br />
                 <p>
                     <b>
-                        Pinion addresses this limitation by embedding
-                        payment-aware execution into the core capability
-                        invocation path of software infrastructure.
+                        r0x addresses this limitation by embedding
+                        USDG-denominated, payment-aware execution into the
+                        core capability invocation path of software
+                        infrastructure — settled natively on Robinhood Chain.
                     </b>
                 </p>
             </div>
@@ -96,7 +100,7 @@ const Overview: React.FC<OverviewProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Pinion defines a model called{' '}
+                    r0x defines a model called{' '}
                     <b>economic execution</b>. In this model, the invocation of
                     a capability includes three atomic actions:
                 </p>
@@ -172,7 +176,7 @@ const styles: StyleSheetCSS = {
     actionNumber: {
         marginRight: 16,
         minWidth: 40,
-        color: '#E8530E',
+        color: '#1F1B10',
     },
     actionContent: {
         flexDirection: 'column',

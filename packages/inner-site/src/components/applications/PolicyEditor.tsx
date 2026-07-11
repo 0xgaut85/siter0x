@@ -185,7 +185,7 @@ const PolicyEditor: React.FC<PolicyEditorProps> = (props) => {
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'Pinion Policy Engine v1.0'}
+            bottomLeftText={'r0x Policy Engine v1.0'}
         >
             <div style={styles.editor}>
                 {/* HEADER */}
@@ -421,21 +421,21 @@ const styles: StyleSheetCSS = {
         borderBottom: '1px solid #333',
     },
     headerTitle: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 11,
         letterSpacing: 2,
     },
     applyButton: {
         padding: '6px 16px',
-        backgroundColor: '#E8530E',
+        backgroundColor: '#CEF506',
         cursor: 'pointer',
     },
     appliedButton: {
         backgroundColor: '#00aa44',
     },
     applyText: {
-        color: '#fff',
+        color: '#1F1B10',
         fontFamily: 'monospace',
         fontSize: 12,
         fontWeight: 'bold',
@@ -456,7 +456,7 @@ const styles: StyleSheetCSS = {
         flexDirection: 'column',
     },
     sectionTitle: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 12,
         letterSpacing: 1,
@@ -515,7 +515,7 @@ const styles: StyleSheetCSS = {
         marginLeft: 4,
     },
     addButtonText: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 14,
     },

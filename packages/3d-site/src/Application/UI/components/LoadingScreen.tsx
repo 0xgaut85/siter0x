@@ -82,11 +82,10 @@ const LoadingScreen: React.FC<LoadingProps> = () => {
                         <div style={styles.reticleContainer}>
                             <img
                                 src="/logo.svg"
-                                alt="pinion"
+                                alt="r0x"
                                 style={{
                                     height: 64,
                                     width: 'auto',
-                                    animation: 'reticleSpin 4s linear infinite',
                                     opacity: 0.85,
                                 }}
                             />
@@ -131,7 +130,7 @@ const LoadingScreen: React.FC<LoadingProps> = () => {
                         transition={{ duration: 0.6, ease: 'easeOut' }}
                         style={styles.centerContent}
                     >
-                        <img src="/logo.svg" alt="pinion" style={styles.enterLogo} />
+                        <img src="/logo.svg" alt="r0x" style={styles.enterLogo} />
                         {mobileWarning && (
                             <p style={styles.mobileWarning}>
                                 Best viewed on desktop
@@ -140,7 +139,7 @@ const LoadingScreen: React.FC<LoadingProps> = () => {
                         <motion.button
                             onClick={start}
                             style={styles.enterButton}
-                            whileHover={{ scale: 1.05, backgroundColor: '#e04d38' }}
+                            whileHover={{ scale: 1.05, backgroundColor: '#A9C905' }}
                             whileTap={{ scale: 0.97 }}
                         >
                             ENTER
@@ -179,7 +178,7 @@ const LoadingScreen: React.FC<LoadingProps> = () => {
 
 const styles: StyleSheetCSS = {
     overlay: {
-        backgroundColor: '#202020',
+        backgroundColor: '#1F1B10',
         width: '100%',
         height: '100%',
         display: 'flex',
@@ -224,7 +223,7 @@ const styles: StyleSheetCSS = {
     },
     progressBarFill: {
         height: '100%',
-        backgroundColor: '#FF5841',
+        backgroundColor: '#CEF506',
         borderRadius: 1,
     },
     progressText: {
@@ -241,8 +240,8 @@ const styles: StyleSheetCSS = {
         fontSize: 16,
         fontWeight: 500,
         letterSpacing: 4,
-        color: '#FFFFFF',
-        backgroundColor: '#FF5841',
+        color: '#1F1B10',
+        backgroundColor: '#CEF506',
         border: 'none',
         borderRadius: 32,
         padding: '16px 56px',
@@ -266,7 +265,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 20,
         fontWeight: 600,
-        color: '#FF5841',
+        color: '#CEF506',
     },
     errorBody: {
         fontFamily: "'Inter', sans-serif",

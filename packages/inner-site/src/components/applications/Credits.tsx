@@ -5,10 +5,13 @@ import { motion } from 'framer-motion';
 
 export interface CreditsProps extends WindowAppProps {}
 
-const CREDITS = [
+const CREDITS: {
+    title: string;
+    rows: [string, string, string?][];
+}[] = [
     {
         title: 'Protocol Design',
-        rows: [['Pinion Team', 'Economic Execution Primitive']],
+        rows: [['Noah Evers', 'Founder', 'https://x.com/neversdev']],
     },
     {
         title: 'Engineering',
@@ -19,16 +22,9 @@ const CREDITS = [
         ],
     },
     {
-        title: 'Sound Design',
-        rows: [
-            ['Sound Cassette', 'Office Ambience'],
-            ['Microsoft', 'Windows 95 Startup Sound'],
-        ],
-    },
-    {
         title: 'Special Thanks',
         rows: [
-            ['The Pinion Community', 'Early Supporters'],
+            ['The r0x Community', 'Early Supporters'],
         ],
     },
 ];
@@ -66,7 +62,7 @@ const Credits: React.FC<CreditsProps> = (props) => {
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'© 2026 Pinion'}
+            bottomLeftText={'© 2026 r0x'}
         >
             <div
                 onMouseDown={nextSlide}
@@ -74,7 +70,7 @@ const Credits: React.FC<CreditsProps> = (props) => {
                 style={styles.credits}
             >
                 <h2 style={styles.title}>Credits</h2>
-                <p style={styles.subtitle}>PinionOS, 2026</p>
+                <p style={styles.subtitle}>r0x OS, 2026</p>
                 <br />
                 <br />
                 <br />
@@ -92,7 +88,18 @@ const Credits: React.FC<CreditsProps> = (props) => {
                             {CREDITS[currentSlide].rows.map((row, i) => {
                                 return (
                                     <div key={`row-${i}`} style={styles.row}>
-                                        <p>{row[0]}</p>
+                                        {row[2] ? (
+                                            <a
+                                                href={row[2]}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={styles.rowLink}
+                                            >
+                                                {row[0]}
+                                            </a>
+                                        ) : (
+                                            <p>{row[0]}</p>
+                                        )}
                                         <p>{row[1]}</p>
                                     </div>
                                 );
@@ -128,7 +135,7 @@ const styles: StyleSheetCSS = {
         overflow: 'hidden',
     },
     title: {
-        color: '#E8530E',
+        color: '#CEF506',
     },
     subtitle: {
         color: '#999',
@@ -140,6 +147,11 @@ const styles: StyleSheetCSS = {
         width: 600,
         alignSelf: 'center',
     },
+    rowLink: {
+        color: '#CEF506',
+        textDecoration: 'underline',
+        cursor: 'pointer',
+    },
     section: {
         overflow: 'none',
         alignItems: 'center',
@@ -149,7 +161,7 @@ const styles: StyleSheetCSS = {
     },
     sectionTitle: {
         marginBottom: 32,
-        color: '#E8530E',
+        color: '#CEF506',
     },
     slideContainer: {
         width: '100%',

@@ -93,7 +93,7 @@ const PrivacyPolicyContent: React.FC = () => (
         <p style={s.meta}>Last Updated: February 7, 2026</p>
 
         <p style={s.body}>
-            Pinion ("we," "us," or "our") is committed to protecting the privacy of our users
+            r0x ("we," "us," or "our") is committed to protecting the privacy of our users
             ("you" or "your"). This Privacy Policy explains how we collect, use, disclose, and
             safeguard your information when you visit our website and use our decentralized
             protocol services (collectively, the "Services").
@@ -202,7 +202,7 @@ const PrivacyPolicyContent: React.FC = () => (
         <ul style={s.list}>
             <li style={s.listItem}>With service providers who assist in operating our Services.</li>
             <li style={s.listItem}>To comply with legal obligations, court orders, or government requests.</li>
-            <li style={s.listItem}>To protect the rights, safety, and property of Pinion and our users.</li>
+            <li style={s.listItem}>To protect the rights, safety, and property of r0x and our users.</li>
             <li style={s.listItem}>In connection with a merger, acquisition, or sale of assets.</li>
         </ul>
 
@@ -235,7 +235,7 @@ const PrivacyPolicyContent: React.FC = () => (
             personal information is collected and to request its deletion.
         </p>
         <p style={s.body}>
-            To exercise any of these rights, please contact us at privacy@pinion.io.
+            To exercise any of these rights, please contact us at privacy@projectr0x.dev.
         </p>
 
         <h3 style={s.heading}>8. Security</h3>
@@ -272,7 +272,7 @@ const PrivacyPolicyContent: React.FC = () => (
             If you have questions or concerns about this Privacy Policy, please contact us:
         </p>
         <p style={s.body}>
-            Email: privacy@pinion.io
+            Email: privacy@projectr0x.dev
         </p>
     </div>
 );
@@ -285,9 +285,9 @@ const TermsOfUseContent: React.FC = () => (
         <p style={s.meta}>Last Updated: February 7, 2026</p>
 
         <p style={s.body}>
-            These Terms of Use ("Terms") govern your access to and use of the Pinion website,
+            These Terms of Use ("Terms") govern your access to and use of the r0x website,
             decentralized protocol, and related services (collectively, the "Services")
-            provided by Pinion ("we," "us," or "our"). By accessing or using the Services,
+            provided by r0x ("we," "us," or "our"). By accessing or using the Services,
             you agree to be bound by these Terms. If you do not agree, you must not use
             the Services.
         </p>
@@ -303,7 +303,7 @@ const TermsOfUseContent: React.FC = () => (
 
         <h3 style={s.heading}>2. Description of Services</h3>
         <p style={s.body}>
-            Pinion provides a decentralized protocol and related tools that allow users to
+            r0x provides a decentralized protocol and related tools that allow users to
             interact with blockchain-based services, including but not limited to staking,
             governance participation, and token management. The Services are provided on an
             "as-is" and "as-available" basis.
@@ -359,7 +359,7 @@ const TermsOfUseContent: React.FC = () => (
 
         <h3 style={s.heading}>5. Token and Protocol Disclaimers</h3>
         <p style={s.body}>
-            Any tokens associated with the Pinion protocol are utility tokens intended for
+            Any tokens associated with the r0x protocol are utility tokens intended for
             use within the protocol ecosystem. They are not securities, shares, or other
             forms of investment. The protocol operates through decentralized smart contracts
             that, once deployed, may not be fully within our control.
@@ -380,7 +380,7 @@ const TermsOfUseContent: React.FC = () => (
         <h3 style={s.heading}>7. Intellectual Property</h3>
         <p style={s.body}>
             All content, trademarks, logos, and other intellectual property displayed on
-            the website are owned by or licensed to Pinion. You may not reproduce,
+            the website are owned by or licensed to r0x. You may not reproduce,
             distribute, modify, or create derivative works without our prior written consent.
             Open-source components of the protocol are governed by their respective licenses.
         </p>
@@ -394,7 +394,7 @@ const TermsOfUseContent: React.FC = () => (
 
         <h3 style={s.heading}>9. Limitation of Liability</h3>
         <p style={s.body}>
-            TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PINION AND ITS AFFILIATES,
+            TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, r0x AND ITS AFFILIATES,
             DIRECTORS, OFFICERS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT,
             INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED
             TO LOSS OF PROFITS, DATA, GOODWILL, OR DIGITAL ASSETS, WHETHER BASED ON WARRANTY,
@@ -409,7 +409,7 @@ const TermsOfUseContent: React.FC = () => (
 
         <h3 style={s.heading}>10. Indemnification</h3>
         <p style={s.body}>
-            You agree to indemnify, defend, and hold harmless Pinion and its affiliates from
+            You agree to indemnify, defend, and hold harmless r0x and its affiliates from
             and against any claims, damages, losses, liabilities, costs, and expenses
             (including reasonable attorneys' fees) arising from your use of the Services,
             violation of these Terms, or infringement of any rights of a third party.
@@ -453,7 +453,7 @@ const TermsOfUseContent: React.FC = () => (
         <h3 style={s.heading}>15. Entire Agreement</h3>
         <p style={s.body}>
             These Terms, together with our Privacy Policy, constitute the entire agreement
-            between you and Pinion regarding the use of the Services and supersede all
+            between you and r0x regarding the use of the Services and supersede all
             prior agreements and understandings.
         </p>
 
@@ -462,7 +462,7 @@ const TermsOfUseContent: React.FC = () => (
             If you have questions about these Terms, please contact us:
         </p>
         <p style={s.body}>
-            Email: legal@pinion.io
+            Email: legal@projectr0x.dev
         </p>
     </div>
 );
@@ -541,7 +541,7 @@ const styles: StyleSheetCSS = {
         width: '90vw',
         maxWidth: 720,
         maxHeight: '90vh',
-        backgroundColor: '#202020',
+        backgroundColor: '#1F1B10',
         borderRadius: 8,
         display: 'flex',
         flexDirection: 'column',

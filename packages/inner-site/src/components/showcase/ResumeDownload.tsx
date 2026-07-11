@@ -25,7 +25,7 @@ const styles: StyleSheetCSS = {
         backgroundColor: '#f8f8f8',
         padding: 12,
         boxSizing: 'border-box',
-        border: '2px solid #E8530E',
+        border: '2px solid #1F1B10',
         borderLeftWidth: 0,
         borderRightWidth: 0,
         width: '100%',

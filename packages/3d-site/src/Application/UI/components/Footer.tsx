@@ -18,7 +18,8 @@ const FOOTER_NAV: FooterNavItem[] = [
         label: 'Platform',
         isHeader: true,
         children: [
-            { label: 'x402 Server', href: 'https://www.x402scan.com/server/49a688db-0234-4609-948c-c3eee1719e5d' },
+            { label: 'x402 Server', href: '#' },
+            { label: 'r0x Facilitator', href: '#' },
             { label: 'Docs', href: '/os/' },
             { label: 'Contact', href: '#' },
         ],
@@ -27,9 +28,9 @@ const FOOTER_NAV: FooterNavItem[] = [
         label: 'Community',
         isHeader: true,
         children: [
-            { label: 'Community', href: '#' },
-            { label: 'Twitter/X', href: 'https://x.com/PinionOS' },
-            { label: 'GitHub', href: 'https://github.com/chu2bard/pinion-os' },
+            { label: 'Telegram', href: '#' },
+            { label: 'Twitter/X', href: 'https://x.com/projectR0X' },
+            { label: 'GitHub', href: 'https://github.com/nhevers/project-r0x' },
         ],
     },
 ];
@@ -55,7 +56,7 @@ const Footer: React.FC<FooterProps> = ({ visible, onOpenModal }) => {
                 style={styles.collapsedBar}
             >
                 <div style={styles.collapsedInner}>
-                    <span style={styles.collapsedBrand}>pinion</span>
+                    <span style={styles.collapsedBrand}>r0x</span>
                     <div style={styles.collapsedRight}>
                         <div style={styles.collapsedLinks}>
                             <button
@@ -73,7 +74,7 @@ const Footer: React.FC<FooterProps> = ({ visible, onOpenModal }) => {
                             </button>
                         </div>
                         <span style={styles.collapsedCopy}>
-                            ©{currentYear} Pinion.
+                            ©{currentYear} r0x.
                         </span>
                         <button
                             style={styles.expandButton}
@@ -165,7 +166,7 @@ const Footer: React.FC<FooterProps> = ({ visible, onOpenModal }) => {
                                     <div style={styles.blockContent1}>
                                         {/* Footer logo */}
                                         <div style={styles.footerLogo}>
-                                            <img src="/logo.svg" alt="pinion" style={styles.footerLogoImg} />
+                                            <img src="/logo.svg" alt="r0x" style={styles.footerLogoImg} />
                                         </div>
 
                                         {/* Nav columns */}
@@ -175,7 +176,7 @@ const Footer: React.FC<FooterProps> = ({ visible, onOpenModal }) => {
                                     {/* Copyright row inside dark block */}
                                     <div style={styles.copyRow1}>
                                         <span style={styles.copyItem1}>
-                                            ©{currentYear} Pinion.
+                                            ©{currentYear} r0x.
                                         </span>
                                         <button
                                             style={styles.copyLink1}
@@ -197,14 +198,14 @@ const Footer: React.FC<FooterProps> = ({ visible, onOpenModal }) => {
 
                                     {/* Large decorative title */}
                                     <div style={styles.footerTitle}>
-                                        <span style={styles.footerTitleText}>pinion</span>
+                                        <span style={styles.footerTitleText}>r0x</span>
                                     </div>
                                 </div>
 
                                 {/* Copyright row on coral */}
                                 <div style={styles.copyRow2}>
                                     <span style={styles.copyItem2}>
-                                        ©{currentYear} Pinion.
+                                        ©{currentYear} r0x.
                                     </span>
                                     <button
                                         style={styles.copyLink2}
@@ -248,8 +249,13 @@ function renderNavColumns(
                     </span>
                     <ul style={styles.subList}>
                         <li style={styles.subItem}>
-                            <a href="https://www.x402scan.com/server/49a688db-0234-4609-948c-c3eee1719e5d" style={styles.subItemLink} target="_blank" rel="noopener noreferrer">
+                            <a href="#" style={styles.subItemLink}>
                                 x402 Server
+                            </a>
+                        </li>
+                        <li style={styles.subItem}>
+                            <a href="#" style={styles.subItemLink}>
+                                r0x Facilitator
                             </a>
                         </li>
                         <li style={styles.subItem}>
@@ -275,16 +281,16 @@ function renderNavColumns(
                     <ul style={styles.subList}>
                         <li style={styles.subItem}>
                             <a href="#" style={styles.subItemLink}>
-                                Community
+                                Telegram
                             </a>
                         </li>
                         <li style={styles.subItem}>
-                            <a href="https://x.com/PinionOS" style={styles.subItemLink} target="_blank" rel="noopener noreferrer">
+                            <a href="https://x.com/projectR0X" style={styles.subItemLink} target="_blank" rel="noopener noreferrer">
                                 Twitter/X
                             </a>
                         </li>
                         <li style={styles.subItem}>
-                            <a href="https://github.com/chu2bard/pinion-os" style={styles.subItemLink} target="_blank" rel="noopener noreferrer">
+                            <a href="https://github.com/nhevers/project-r0x" style={styles.subItemLink} target="_blank" rel="noopener noreferrer">
                                 GitHub
                             </a>
                         </li>
@@ -309,7 +315,7 @@ const styles: StyleSheetCSS = {
         boxSizing: 'border-box',
     },
     collapsedInner: {
-        backgroundColor: '#202020',
+        backgroundColor: '#1F1B10',
         clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px))',
         padding: '12px 24px',
         pointerEvents: 'auto',
@@ -323,7 +329,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 12,
         fontWeight: 700,
-        color: '#FF5841',
+        color: '#CEF506',
         letterSpacing: 0,
     },
     collapsedRight: {
@@ -342,7 +348,7 @@ const styles: StyleSheetCSS = {
         padding: 0,
         fontFamily: "'Space Mono', monospace",
         fontSize: 11,
-        color: '#FF5841',
+        color: '#CEF506',
         cursor: 'pointer',
         outline: 'none',
         textDecoration: 'none',
@@ -388,7 +394,7 @@ const styles: StyleSheetCSS = {
         bottom: 0,
         left: 0,
         width: '100%',
-        backgroundColor: '#FF5841',
+        backgroundColor: '#CEF506',
         zIndex: 91,
         boxSizing: 'border-box',
         maxHeight: '90vh',
@@ -413,7 +419,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 14,
         fontWeight: 400,
-        color: '#202020',
+        color: '#1F1B10',
         marginBottom: 8,
     },
     subscribeRow: {
@@ -426,17 +432,17 @@ const styles: StyleSheetCSS = {
         flex: 1,
         background: 'none',
         border: 'none',
-        borderBottom: '1px solid #202020',
+        borderBottom: '1px solid #1F1B10',
         padding: '12px 0',
         fontFamily: "'Inter', sans-serif",
         fontSize: 18,
         fontWeight: 400,
-        color: '#202020',
+        color: '#1F1B10',
         outline: 'none',
     },
     subscribeBtn: {
-        backgroundColor: '#202020',
-        color: '#FF5841',
+        backgroundColor: '#1F1B10',
+        color: '#CEF506',
         fontFamily: "'Space Mono', monospace",
         fontSize: 12,
         fontWeight: 500,
@@ -450,13 +456,13 @@ const styles: StyleSheetCSS = {
     },
     subscribeLine: {
         height: 1,
-        backgroundColor: '#202020',
+        backgroundColor: '#1F1B10',
         marginTop: -1,
     },
 
     /* --- Dark inner block --- */
     footerBlock: {
-        backgroundColor: '#202020',
+        backgroundColor: '#1F1B10',
         clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px))',
         padding: '56px 40px 40px',
         marginBottom: 16,
@@ -512,7 +518,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 24,
         fontWeight: 400,
-        color: '#FF5841',
+        color: '#CEF506',
         textDecoration: 'none',
         lineHeight: '32px',
         transition: 'opacity 0.2s ease',
@@ -523,7 +529,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 24,
         fontWeight: 400,
-        color: '#FF5841',
+        color: '#CEF506',
         lineHeight: '32px',
     },
     navSup: {
@@ -545,7 +551,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 24,
         fontWeight: 400,
-        color: '#FF5841',
+        color: '#CEF506',
         textDecoration: 'none',
         paddingLeft: 32,
         lineHeight: '32px',
@@ -563,7 +569,7 @@ const styles: StyleSheetCSS = {
     copyItem1: {
         fontFamily: "'Space Mono', monospace",
         fontSize: 12,
-        color: '#FF5841',
+        color: '#CEF506',
     },
     copyLink1: {
         background: 'none',
@@ -571,7 +577,7 @@ const styles: StyleSheetCSS = {
         padding: 0,
         fontFamily: "'Space Mono', monospace",
         fontSize: 12,
-        color: '#FF5841',
+        color: '#CEF506',
         cursor: 'pointer',
         outline: 'none',
         textDecoration: 'none',
@@ -586,7 +592,7 @@ const styles: StyleSheetCSS = {
         fontFamily: "'Inter', sans-serif",
         fontSize: 160,
         fontWeight: 800,
-        color: '#FF5841',
+        color: '#CEF506',
         lineHeight: 0.9,
         letterSpacing: 0,
         display: 'block',
@@ -603,7 +609,7 @@ const styles: StyleSheetCSS = {
     copyItem2: {
         fontFamily: "'Space Mono', monospace",
         fontSize: 12,
-        color: '#202020',
+        color: '#1F1B10',
     },
     copyLink2: {
         background: 'none',
@@ -611,7 +617,7 @@ const styles: StyleSheetCSS = {
         padding: 0,
         fontFamily: "'Space Mono', monospace",
         fontSize: 12,
-        color: '#202020',
+        color: '#1F1B10',
         cursor: 'pointer',
         outline: 'none',
         textDecoration: 'none',
@@ -626,7 +632,7 @@ const styles: StyleSheetCSS = {
         width: 40,
         height: 40,
         borderRadius: '50%',
-        border: '1.5px solid #202020',
+        border: '1.5px solid #1F1B10',
         background: 'none',
         cursor: 'pointer',
         outline: 'none',
@@ -639,7 +645,7 @@ const styles: StyleSheetCSS = {
     },
     footerCloseIcon: {
         fontSize: 22,
-        color: '#202020',
+        color: '#1F1B10',
         lineHeight: 1,
         fontFamily: "'Inter', sans-serif",
         fontWeight: 300,

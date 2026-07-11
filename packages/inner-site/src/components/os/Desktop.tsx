@@ -3,15 +3,14 @@ import Colors from '../../constants/colors';
 import ShowcaseExplorer from '../applications/ShowcaseExplorer';
 
 import ShutdownSequence from './ShutdownSequence';
-import VideoPlayer from '../applications/VideoPlayer';
 import Toolbar from './Toolbar';
 import DesktopShortcut, { DesktopShortcutProps } from './DesktopShortcut';
 import { IconName } from '../../assets/icons';
 import Credits from '../applications/Credits';
 import PinionAgent from '../applications/PinionAgent';
 import ConnectWallet from '../applications/ConnectWallet';
-import OpenClawGateway from '../applications/OpenClawGateway';
 import ServerViewer from '../applications/ServerViewer';
+import FacilitatorViewer from '../applications/FacilitatorViewer';
 import PinionToken from '../applications/PinionToken';
 
 export interface DesktopProps {}
@@ -28,15 +27,9 @@ const APPLICATIONS: {
 } = {
     showcase: {
         key: 'showcase',
-        name: 'Protocol Explorer',
+        name: 'r0x Explorer',
         shortcutIcon: 'showcaseIcon',
         component: ShowcaseExplorer,
-    },
-    video: {
-        key: 'video',
-        name: 'intro.mp4',
-        shortcutIcon: 'videoIcon',
-        component: VideoPlayer,
     },
     wallet: {
         key: 'wallet',
@@ -44,23 +37,23 @@ const APPLICATIONS: {
         shortcutIcon: 'walletIcon',
         component: ConnectWallet,
     },
-    openclaw: {
-        key: 'openclaw',
-        name: 'OpenClaw Gateway',
-        shortcutIcon: 'openclawIcon',
-        component: OpenClawGateway,
-    },
     agent: {
         key: 'agent',
-        name: 'Pinion Agent',
+        name: 'r0x Agent',
         shortcutIcon: 'agentIcon',
         component: PinionAgent,
     },
     server: {
         key: 'server',
-        name: 'Server',
+        name: 'x402 Server',
         shortcutIcon: 'serverIcon',
         component: ServerViewer,
+    },
+    facilitator: {
+        key: 'facilitator',
+        name: 'r0x Facilitator',
+        shortcutIcon: 'facilitatorIcon',
+        component: FacilitatorViewer,
     },
     credits: {
         key: 'credits',
@@ -70,7 +63,7 @@ const APPLICATIONS: {
     },
     pinionToken: {
         key: 'pinionToken',
-        name: '$Pinion',
+        name: '$r0x',
         shortcutIcon: 'pinionTokenIcon',
         component: PinionToken,
     },
@@ -116,7 +109,7 @@ const Desktop: React.FC<DesktopProps> = (props) => {
         });
 
         newShortcuts.forEach((shortcut) => {
-            if (shortcut.shortcutName === 'Protocol Explorer') {
+            if (shortcut.shortcutName === 'r0x Explorer') {
                 shortcut.onOpen();
             }
         });
@@ -216,7 +209,7 @@ const Desktop: React.FC<DesktopProps> = (props) => {
         <div style={styles.desktop}>
             {/* Desktop wallpaper logo */}
             <div style={styles.wallpaper}>
-                <img src={process.env.PUBLIC_URL + '/logo.svg'} alt="pinion" style={styles.wallpaperLogo} />
+                <img src={process.env.PUBLIC_URL + '/logo.svg'} alt="r0x" style={styles.wallpaperLogo} />
             </div>
             {/* For each window in windows, loop over and render  */}
             {Object.keys(windows).map((key) => {

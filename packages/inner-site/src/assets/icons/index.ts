@@ -15,6 +15,7 @@ import volumeOff from './volumeOff.png';
 import trailIcon from './trailIcon.png';
 import windowGameIcon from './windowGameIcon.png';
 import windowExplorerIcon from './windowExplorerIcon.png';
+import windowR0xExplorerIcon from './windowR0xExplorerIcon.png';
 import windowsStartIcon from './windowsStartIcon.png';
 import scrabbleIcon from './scrabbleIcon.png';
 import close from './close.png';
@@ -23,10 +24,10 @@ import videoIcon from './videoIcon.png';
 import windowVideoIcon from './windowVideoIcon.png';
 import walletIcon from './walletIcon.png';
 import windowWalletIcon from './windowWalletIcon.png';
-import openclawIcon from './openclawIcon.png';
-import windowOpenclawIcon from './windowOpenclawIcon.png';
 import serverIcon from './serverIcon.png';
 import windowServerIcon from './windowServerIcon.png';
+import facilitatorIcon from './facilitatorIcon.png';
+import windowFacilitatorIcon from './windowFacilitatorIcon.png';
 import pinionTokenIcon from './pinionTokenIcon.png';
 
 const icons = {
@@ -46,6 +47,7 @@ const icons = {
     close: close,
     windowGameIcon: windowGameIcon,
     windowExplorerIcon: windowExplorerIcon,
+    windowR0xExplorerIcon: windowR0xExplorerIcon,
     windowsStartIcon: windowsStartIcon,
     trailIcon: trailIcon,
     agentIcon: agentIcon,
@@ -53,10 +55,10 @@ const icons = {
     windowVideoIcon: windowVideoIcon,
     walletIcon: walletIcon,
     windowWalletIcon: windowWalletIcon,
-    openclawIcon: openclawIcon,
-    windowOpenclawIcon: windowOpenclawIcon,
     serverIcon: serverIcon,
     windowServerIcon: windowServerIcon,
+    facilitatorIcon: facilitatorIcon,
+    windowFacilitatorIcon: windowFacilitatorIcon,
     pinionTokenIcon: pinionTokenIcon,
 };
 

@@ -17,7 +17,7 @@ const CAPABILITIES = [
     'content-generation', 'knowledge-graph', 'embedding',
 ];
 
-const NETWORKS = ['Base', 'Solana'];
+const NETWORKS = ['Robinhood Chain'];
 
 function randomFrom<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -106,7 +106,7 @@ const ExecutionMonitor: React.FC<ExecutionMonitorProps> = (props) => {
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'Pinion Execution Monitor v1.0'}
+            bottomLeftText={'r0x Execution Monitor v1.0'}
         >
             <div style={styles.monitor}>
                 {/* HEADER */}
@@ -227,7 +227,7 @@ const styles: StyleSheetCSS = {
         borderBottom: '1px solid #333',
     },
     headerTitle: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 11,
         letterSpacing: 2,

@@ -101,12 +101,6 @@ br {
     50% { opacity: 0.7; }
 }
 
-/* ===== Reticle spin ===== */
-@keyframes reticleSpin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-}
-
 /* ===== Navbar item link (used in menu panel) ===== */
 .navbar-link {
     font-family: var(--font-display);
@@ -141,7 +135,7 @@ br {
 }
 
 .legal-modal-content::-webkit-scrollbar-track {
-    background: #202020;
+    background: #1F1B10;
 }
 
 .legal-modal-content::-webkit-scrollbar-thumb {

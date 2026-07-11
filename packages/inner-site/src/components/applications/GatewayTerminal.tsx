@@ -4,7 +4,7 @@ import Window from '../os/Window';
 export interface GatewayTerminalProps extends WindowAppProps {}
 
 const DEMO_SCRIPT = [
-    { text: '$ pinion discover --capability "text-analysis"', delay: 50 },
+    { text: '$ r0x discover --capability "text-analysis"', delay: 50 },
     { text: '', delay: 500 },
     { text: '[GATEWAY] Querying capability registry...', delay: 30 },
     { text: '[GATEWAY] Found 3 providers for "text-analysis":', delay: 30 },
@@ -15,7 +15,7 @@ const DEMO_SCRIPT = [
     { text: '  cap-3f09    neural-core     0.002 ETH   87/100  32ms', delay: 100 },
     { text: '  cap-9c44    data-weaver     0.0008 ETH  71/100  89ms', delay: 100 },
     { text: '', delay: 500 },
-    { text: '$ pinion invoke cap-7a21 --input "Analyze Q4 market trends"', delay: 50 },
+    { text: '$ r0x invoke cap-7a21 --input "Analyze Q4 market trends"', delay: 50 },
     { text: '', delay: 300 },
     { text: '[POLICY] Evaluating spending policy...', delay: 30 },
     { text: '[POLICY] Budget remaining: 0.47 ETH (daily limit: 1.0 ETH)', delay: 30 },
@@ -28,10 +28,10 @@ const DEMO_SCRIPT = [
     { text: '[x402] ← 402 Payment Required', delay: 30 },
     { text: '[x402]   x-payment-amount: 0.001 ETH', delay: 20 },
     { text: '[x402]   x-payment-address: 0x7a21...f309', delay: 20 },
-    { text: '[x402]   x-payment-network: base', delay: 20 },
+    { text: '[x402]   x-payment-network: eip155:4663 (Robinhood Chain)', delay: 20 },
     { text: '[x402]   x-payment-token: ETH', delay: 20 },
     { text: '', delay: 300 },
-    { text: '[x402] Submitting payment on Base...', delay: 30 },
+    { text: '[x402] Submitting payment on Robinhood Chain...', delay: 30 },
     { text: '[x402] Transaction hash: 0xd4e5f6...a1b2c3', delay: 30 },
     { text: '[x402] Settlement confirmed (block #18,442,017)', delay: 30 },
     { text: '', delay: 400 },
@@ -49,7 +49,7 @@ const DEMO_SCRIPT = [
     { text: '│  Summary: Q4 shows 23% growth in autonomous     │', delay: 10 },
     { text: '│  agent deployments with infrastructure spend     │', delay: 10 },
     { text: '│  increasing 41% YoY. Key drivers: x402 adoption │', delay: 10 },
-    { text: '│  (+156%), OpenClaw runtime expansion and          │', delay: 10 },
+    { text: '│  (+156%), skill runtime expansion and             │', delay: 10 },
     { text: '│  enterprise policy automation.                   │', delay: 10 },
     { text: '│                                                  │', delay: 10 },
     { text: '│  Confidence: 0.94 | Tokens: 2,847               │', delay: 10 },
@@ -61,7 +61,7 @@ const DEMO_SCRIPT = [
     { text: '│  Capability:   text-analysis                     │', delay: 10 },
     { text: '│  Provider:     agent-alpha                       │', delay: 10 },
     { text: '│  Cost:         0.001 ETH ($2.47)                 │', delay: 10 },
-    { text: '│  Network:      Base                              │', delay: 10 },
+    { text: '│  Network:      Robinhood Chain                   │', delay: 10 },
     { text: '│  Tx Hash:      0xd4e5f6...a1b2c3                │', delay: 10 },
     { text: '│  Trust Score:  92 → 92 (no change)               │', delay: 10 },
     { text: '│  Timestamp:    2026-02-08T14:32:17Z              │', delay: 10 },
@@ -150,11 +150,11 @@ const GatewayTerminal: React.FC<GatewayTerminalProps> = (props) => {
             closeWindow={props.onClose}
             onInteract={props.onInteract}
             minimizeWindow={props.onMinimize}
-            bottomLeftText={'Pinion Capability Gateway v1.0'}
+            bottomLeftText={'r0x Capability Gateway v1.0'}
         >
             <div style={styles.terminal}>
                 <div style={styles.header}>
-                    <span style={styles.headerText}>PINION GATEWAY TERMINAL</span>
+                    <span style={styles.headerText}>r0x GATEWAY TERMINAL</span>
                     {!isRunning && (
                         <div
                             onMouseDown={handleRestart}
@@ -206,18 +206,18 @@ const styles: StyleSheetCSS = {
         alignItems: 'center',
     },
     headerText: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 11,
         letterSpacing: 2,
     },
     restartButton: {
         padding: '4px 12px',
-        border: '1px solid #E8530E',
+        border: '1px solid #CEF506',
         cursor: 'pointer',
     },
     restartText: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 11,
     },
@@ -248,13 +248,13 @@ const styles: StyleSheetCSS = {
         color: '#87CEEB',
     },
     runtime: {
-        color: '#E8530E',
+        color: '#CEF506',
     },
     gateway: {
         color: '#BB86FC',
     },
     box: {
-        color: '#E8530E',
+        color: '#CEF506',
     },
 };
 

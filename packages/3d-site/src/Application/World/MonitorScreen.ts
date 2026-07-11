@@ -183,9 +183,11 @@ export default class MonitorScreen extends EventEmitter {
         };
 
         // Set iframe attributes
-        // Auto-detect: if not on localhost, use production path
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        iframe.src = isLocal ? 'http://localhost:3000/' : '/os/';
+        // Inner-site (the desktop OS) is always served at /os/, both in the
+        // unified dev server and in production. Using the current origin
+        // avoids ever pointing the iframe back at the 3d-site root, which
+        // would recursively re-embed the 3D scene inside itself.
+        iframe.src = `${window.location.origin}/os/`;
         iframe.style.width = this.screenSize.width + 'px';
         iframe.style.height = this.screenSize.height + 'px';
         iframe.style.padding = IFRAME_PADDING + 'px';

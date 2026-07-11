@@ -24,7 +24,7 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
                     ERC-8004 is a proposed Ethereum standard for on-chain
                     identity and trust scoring of autonomous agents. It is
                     not yet in production. This page describes how it would
-                    fit into the existing Pinion stack.
+                    fit into the existing r0x stack.
                 </p>
             </div>
 
@@ -39,11 +39,12 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
             <div className="text-block">
                 <div style={styles.statusCard}>
                     <p>
-                        <b>Not in production.</b> Pinion currently uses x402
-                        for payments and OpenClaw for skill discovery. Both
-                        are live on Base mainnet. ERC-8004 is the planned
-                        third layer that would add identity verification
-                        and trust scoring to the stack.
+                        <b>Not in production.</b> r0x currently uses x402
+                        for payments and plain HTTP skills for discovery. Both
+                        are live on Robinhood Chain, self-facilitated since no
+                        third-party facilitator supports the chain yet.
+                        ERC-8004 is the planned third layer that would add
+                        identity verification and trust scoring to the stack.
                     </p>
                 </div>
             </div>
@@ -58,7 +59,7 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Right now any wallet with USDC can call a Pinion skill.
+                    Right now any wallet with USDG can call a r0x skill.
                     ERC-8004 would add a trust layer on top of that.
                 </p>
                 <br />
@@ -101,7 +102,7 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
             <div className="text-block">
                 <pre style={styles.codeBlock}>
 {`┌──────────────────────────────────────┐
-│          PINION STACK                │
+│             r0x STACK                │
 │                                      │
 │  ┌────────────────────────────────┐  │
 │  │  ERC-8004  (planned)           │  │
@@ -109,16 +110,16 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
 │  └────────────┬───────────────────┘  │
 │               │                      │
 │  ┌────────────▼───────────────────┐  │
-│  │  x402  (live)                  │  │
-│  │  HTTP 402 USDC Payments        │  │
+│  │  x402 v2  (live, self-hosted)  │  │
+│  │  HTTP 402 USDG Payments        │  │
 │  └────────────┬───────────────────┘  │
 │               │                      │
 │  ┌────────────▼───────────────────┐  │
-│  │  OpenClaw  (live)              │  │
+│  │  r0x Skills  (live)             │  │
 │  │  Skill Discovery + Execution   │  │
 │  └────────────────────────────────┘  │
 │                                      │
-│  Network: Base Mainnet               │
+│  Network: Robinhood Chain (4663)     │
 └──────────────────────────────────────┘`}
                 </pre>
             </div>
@@ -129,7 +130,7 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
                     stack. Before processing a payment the middleware would
                     check the caller's trust score against the skill's
                     minimum threshold. Everything below (x402 payment,
-                    OpenClaw skill execution) stays the same.
+                    skill execution) stays the same.
                 </p>
             </div>
             <ResumeDownload />
@@ -153,19 +154,19 @@ const styles: StyleSheetCSS = {
         alignItems: 'flex-end',
     },
     badge: {
-        backgroundColor: '#E8530E',
+        backgroundColor: '#CEF506',
         padding: '4px 10px',
     },
     badgeText: {
-        color: '#fff',
+        color: '#1F1B10',
         fontSize: 10,
         letterSpacing: 2,
         fontWeight: 'bold',
     },
     statusCard: {
         padding: 16,
-        border: '2px solid #E8530E',
-        backgroundColor: '#fff8f6',
+        border: '2px solid #1F1B10',
+        backgroundColor: '#f8ffe0',
         flexDirection: 'column',
         marginBottom: 16,
     },
@@ -177,7 +178,7 @@ const styles: StyleSheetCSS = {
         flexDirection: 'column',
     },
     conceptTitle: {
-        color: '#E8530E',
+        color: '#1F1B10',
         marginBottom: 8,
     },
     codeBlock: {
@@ -185,7 +186,7 @@ const styles: StyleSheetCSS = {
         fontSize: 11,
         lineHeight: 1.4,
         backgroundColor: '#1a1a1a',
-        color: '#E8530E',
+        color: '#CEF506',
         padding: 16,
         overflow: 'auto',
         whiteSpace: 'pre',

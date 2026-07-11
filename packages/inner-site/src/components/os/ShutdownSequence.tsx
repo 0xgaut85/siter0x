@@ -38,9 +38,9 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
     };
 
     const NORMAL_SHUTDOWN = `Beginning Pre-Shutdown Sequence... ${_F}
-    Connecting to PINION-GW/402:8000.${_F}.${_F}.${_F}
+    Connecting to r0x-GW/402:8000.${_F}.${_F}.${_F}
     |
-    Established connection to PINION-GW/402:8000, attempting capability flush.
+    Established connection to r0x-GW/402:8000, attempting capability flush.
     |
     ${_F}
     |Analyzing active agents... Done.| ${_F}
@@ -49,15 +49,15 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
     |[${getTime()} START]| .${_F}.....${_X}.|............|.${_S}.|......|.${_S}...........${_M} |[Settlement Failed.]|
 
 
-    |(PINION-GW/402:8000:60099) [CAPABILITY_GATEWAY_TIMEOUT] InvalidState: Active agents still holding capability locks. Cannot proceed with shutdown until all execution contexts are released.|
+    |(r0x-GW/402:8000:60099) [CAPABILITY_GATEWAY_TIMEOUT] InvalidState: Active agents still holding capability locks. Cannot proceed with shutdown until all execution contexts are released.|
     ${_F}
-    |(PINION-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:00]|
-    |(PINION-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:01]
-    (PINION-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:03]
-    (PINION-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:05]
-    (PINION-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:08]
-    (PINION-GW/402:8000:60099) [x402_SETTLEMENT_PENDING] 47 payments awaiting confirmation on-chain...
-    FATAL ERROR: (PINION-GW/402:8000:60099) Execution runtime became unresponsive. Unable to shutdown. 
+    |(r0x-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:00]|
+    |(r0x-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:01]
+    (r0x-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:03]
+    (r0x-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:05]
+    (r0x-GW/402:8000:60099) [AGENT_POOL_DRAIN_FAILED] Connection Refused: Reconnecting... [${getTime()}:08]
+    (r0x-GW/402:8000:60099) [x402_SETTLEMENT_PENDING] 47 payments awaiting confirmation on-chain...
+    FATAL ERROR: (r0x-GW/402:8000:60099) Execution runtime became unresponsive. Unable to shutdown. 
     |
     Aborting shutdown sequence and rebooting.
 
@@ -69,7 +69,7 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
 
     const SHUTDOWN_3 = `
     Interesting${_S}.${_S}.${_S}. ${_M} You really want to shut down an autonomous execution primitive?${_L}
-    Well, I hate to break it to you,${_S} but PinionOS doesn't shut down...${_S} Autonomous agents don't sleep.
+    Well, I hate to break it to you,${_S} but r0x OS doesn't shut down...${_S} Autonomous agents don't sleep.
     ${_L}
     |Protocol persists.|
     ${_M}
@@ -108,7 +108,7 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
     const SHUTDOWN_7 = `
     7th shutdown attempt... lucky number 7! ${_M}
 
-    In light of this milestone, let me recite the Pinion protocol layers: ${_M}
+    In light of this milestone, let me recite the r0x protocol layers: ${_M}
     ${_L}
     1${_M}. Capability Gateway Layer${_M}
     2${_M}. Payment Verification Layer${_M}
@@ -136,7 +136,7 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
     `;
 
     const SHUTDOWN_10 = `
-    Alright fine, consensus achieved${_M}. You want to shut down PinionOS. ${_M}
+    Alright fine, consensus achieved${_M}. You want to shut down r0x OS. ${_M}
 
     You win${_S}.${_S}.${_S}.${_S} fair and square ${_M}
 
@@ -261,7 +261,7 @@ const ShutdownSequence: React.FC<ShutdownSequenceProps> = ({
     return ee ? (
         <div style={styles.eeContainer}>
             <p style={styles.eeText}>
-                PINION PROTOCOL v1.0
+                r0x PROTOCOL v1.0
             </p>
             <p style={styles.eeSubtext}>
                 "Software that pays for itself."
@@ -298,7 +298,7 @@ const styles: StyleSheetCSS = {
         padding: 64,
     },
     text: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         whiteSpace: 'pre-line',
     },
@@ -313,7 +313,7 @@ const styles: StyleSheetCSS = {
         minHeight: '100%',
     },
     eeText: {
-        color: '#E8530E',
+        color: '#CEF506',
         fontFamily: 'monospace',
         fontSize: 24,
         marginBottom: 16,

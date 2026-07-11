@@ -1,15 +1,15 @@
 import React from 'react';
 import ResumeDownload from '../ResumeDownload';
 
-export interface OpenClawPageProps {}
+export interface SkillsPageProps {}
 
-const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
+const SkillsPage: React.FC<SkillsPageProps> = (props) => {
     return (
         <div className="site-page-content">
             <div style={styles.headerContainer}>
                 <div style={styles.header}>
                     <div style={styles.headerRow}>
-                        <h1>OpenClaw</h1>
+                        <h1>r0x Skills</h1>
                         <div style={styles.badge}>
                             <span style={styles.badgeText}>EXECUTION</span>
                         </div>
@@ -21,10 +21,11 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    OpenClaw is a skill-as-a-service standard for autonomous
-                    agents. Skills are HTTP endpoints that agents can discover,
-                    price-check and invoke programmatically. Pinion packages
-                    all of its capabilities as OpenClaw skills.
+                    r0x packages every capability as a skill: a plain HTTP
+                    endpoint that agents can discover, price-check and invoke
+                    programmatically. No SDK is required to call a skill —
+                    any HTTP client that can sign an EIP-3009 authorization
+                    works.
                 </p>
             </div>
 
@@ -38,51 +39,58 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Eight skills are live in production at{' '}
-                    <b>pinionos.com/skill/</b>. Each costs $0.01 USDC on
-                    Base mainnet via x402.
+                    Nine skills are live in production at{' '}
+                    <b>projectr0x.dev/skill/</b>. Each costs $0.01 USDG on
+                    Robinhood Chain via x402, self-facilitated by r0x.
                 </p>
                 <br />
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>Balance Lookup</h3>
                     <code style={styles.skillEndpoint}>GET /skill/balance/:address</code>
-                    <p>Returns ETH and USDC balances for any Base address.</p>
+                    <p>Returns ETH and USDG balances for any Robinhood Chain address.</p>
                 </div>
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>Transaction Details</h3>
                     <code style={styles.skillEndpoint}>GET /skill/tx/:hash</code>
-                    <p>Decoded transaction info for any Base tx hash.</p>
+                    <p>Decoded transaction info for any Robinhood Chain tx hash.</p>
                 </div>
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>Token Price</h3>
                     <code style={styles.skillEndpoint}>GET /skill/price/:token</code>
-                    <p>Current USD price for ETH or other tokens via CoinGecko.</p>
+                    <p>Current USD price for ETH or USDG via CoinGecko.</p>
                 </div>
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>Wallet Generation</h3>
                     <code style={styles.skillEndpoint}>GET /skill/wallet/generate</code>
-                    <p>Generates a fresh Ethereum keypair for Base. Useful for funding OpenClaw agents.</p>
+                    <p>Generates a fresh Ethereum keypair for Robinhood Chain. Useful for funding your agent.</p>
                 </div>
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>AI Agent Chat</h3>
                     <code style={styles.skillEndpoint}>POST /skill/chat</code>
-                    <p>Chat with the Pinion AI Agent. Send a messages array, get a response.</p>
+                    <p>Chat with the r0x AI Agent. Send a messages array, get a response.</p>
                 </div>
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>Send</h3>
                     <code style={styles.skillEndpoint}>POST /skill/send</code>
-                    <p>Construct an unsigned ETH or USDC transfer transaction on Base. Client signs and broadcasts.</p>
-                </div>
-                <div style={styles.skillCard}>
-                    <h3 style={styles.skillTitle}>Trade</h3>
-                    <code style={styles.skillEndpoint}>POST /skill/trade</code>
-                    <p>Get an unsigned swap transaction via 1inch aggregator. Includes approval tx if needed.</p>
+                    <p>Construct an unsigned ETH or USDG transfer transaction on Robinhood Chain. Client signs and broadcasts.</p>
                 </div>
                 <div style={styles.skillCard}>
                     <h3 style={styles.skillTitle}>Fund</h3>
                     <code style={styles.skillEndpoint}>GET /skill/fund/:address</code>
-                    <p>Check wallet balances and get funding instructions for Base. ETH and USDC.</p>
+                    <p>Check wallet balances and get funding instructions for Robinhood Chain. ETH and USDG.</p>
                 </div>
+                <div style={styles.skillCard}>
+                    <h3 style={styles.skillTitle}>Broadcast</h3>
+                    <code style={styles.skillEndpoint}>POST /skill/broadcast</code>
+                    <p>Sign and broadcast a transaction on Robinhood Chain given an unsigned tx and private key.</p>
+                </div>
+            </div>
+            <div className="text-block">
+                <p style={{ opacity: 0.7, fontSize: 12 }}>
+                    Note: <b>Trade</b> (<code style={styles.skillEndpoint}>POST /skill/trade</code>) exists but
+                    is temporarily disabled and not paywalled — no DEX aggregator supports Robinhood Chain
+                    (chain ID 4663) yet.
+                </p>
             </div>
 
             {/* SKILL CATALOG */}
@@ -108,20 +116,23 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
       "endpoint": "/skill/balance/:address",
       "method": "GET",
       "price": "$0.01",
-      "currency": "USDC",
-      "network": "base",
-      "description": "Get ETH and USDC balances for any Base address"
+      "currency": "USDG",
+      "network": "eip155:4663",
+      "description": "Get ETH and USDG balances for any Robinhood Chain address"
     },
     { "endpoint": "/skill/tx/:hash", ... },
     { "endpoint": "/skill/price/:token", ... },
     { "endpoint": "/skill/wallet/generate", ... },
     { "endpoint": "/skill/chat", "method": "POST", ... },
     { "endpoint": "/skill/send", "method": "POST", ... },
-    { "endpoint": "/skill/trade", "method": "POST", ... },
-    { "endpoint": "/skill/fund/:address", ... }
+    { "endpoint": "/skill/fund/:address", ... },
+    { "endpoint": "/skill/broadcast", "method": "POST", ... },
+    { "endpoint": "/skill/trade", "method": "POST", "price": "unavailable", ... }
   ],
   "payTo": "0x101Cd32b9bEEE93845Ead7Bc604a5F1873330acf",
-  "network": "base"
+  "network": "eip155:4663",
+  "chainId": 4663,
+  "asset": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168"
 }`}
                 </pre>
             </div>
@@ -136,24 +147,24 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Each skill set is described by an{' '}
-                    <b>openclaw.plugin.json</b> manifest that agents use
+                    Each skill set is described by a{' '}
+                    <b>skills.json</b> manifest that agents use
                     for discovery.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
 {`{
-  "name": "pinion-openclaw-skill",
-  "version": "1.0.0",
-  "description": "On-chain intelligence + transactions on Base via x402",
+  "name": "r0x-skills",
+  "version": "2.0.0",
+  "description": "On-chain intelligence + transactions on Robinhood Chain via x402 v2",
   "skills": [
     {
       "name": "balance-lookup",
       "endpoint": "/skill/balance/{address}",
       "method": "GET",
       "price": "0.01",
-      "currency": "USDC",
-      "network": "base"
+      "currency": "USDG",
+      "network": "eip155:4663"
     },
     { "name": "tx-details", "endpoint": "/skill/tx/{hash}", ... },
     { "name": "token-price", "endpoint": "/skill/price/{token}", ... },
@@ -164,24 +175,24 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
       "endpoint": "/skill/send",
       "method": "POST",
       "price": "0.01",
-      "currency": "USDC",
-      "network": "base"
-    },
-    {
-      "name": "trade",
-      "endpoint": "/skill/trade",
-      "method": "POST",
-      "price": "0.01",
-      "currency": "USDC",
-      "network": "base"
+      "currency": "USDG",
+      "network": "eip155:4663"
     },
     {
       "name": "fund",
       "endpoint": "/skill/fund/{address}",
       "method": "GET",
       "price": "0.01",
-      "currency": "USDC",
-      "network": "base"
+      "currency": "USDG",
+      "network": "eip155:4663"
+    },
+    {
+      "name": "broadcast",
+      "endpoint": "/skill/broadcast",
+      "method": "POST",
+      "price": "0.01",
+      "currency": "USDG",
+      "network": "eip155:4663"
     }
   ]
 }`}
@@ -202,18 +213,20 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
 │              CLIENT / AGENT              │
 │                                          │
 │  1. GET /skill/balance/0xABC...          │
-│  2. Receive 402 + payment requirements   │
-│  3. Sign EIP-3009 USDC transfer          │
-│  4. Retry with X-PAYMENT header          │
+│  2. Receive 402 + PAYMENT-REQUIRED header│
+│  3. Sign EIP-3009 USDG transfer          │
+│  4. Retry with PAYMENT-SIGNATURE header  │
 └────────────────┬─────────────────────────┘
                  │
                  ▼
 ┌──────────────────────────────────────────┐
-│          x402-express MIDDLEWARE          │
+│   @x402/express MIDDLEWARE (v2, self-    │
+│         hosted facilitator)               │
 │                                          │
 │  - Intercepts request                    │
 │  - Sends 402 if no payment              │
-│  - Verifies payment via facilitator     │
+│  - Verifies + settles payment in-process │
+│    using r0x's own gas wallet            │
 │  - Forwards to skill handler if valid   │
 └────────────────┬─────────────────────────┘
                  │
@@ -221,7 +234,7 @@ const OpenClawPage: React.FC<OpenClawPageProps> = (props) => {
 ┌──────────────────────────────────────────┐
 │            SKILL HANDLER                 │
 │                                          │
-│  - Calls Base RPC / CoinGecko / etc     │
+│  - Calls Robinhood Chain RPC / CoinGecko │
 │  - Returns JSON response                │
 └──────────────────────────────────────────┘`}
                 </pre>
@@ -247,11 +260,11 @@ const styles: StyleSheetCSS = {
         alignItems: 'flex-end',
     },
     badge: {
-        backgroundColor: '#E8530E',
+        backgroundColor: '#CEF506',
         padding: '4px 10px',
     },
     badgeText: {
-        color: '#fff',
+        color: '#1F1B10',
         fontSize: 10,
         letterSpacing: 2,
         fontWeight: 'bold',
@@ -264,7 +277,7 @@ const styles: StyleSheetCSS = {
         flexDirection: 'column',
     },
     skillTitle: {
-        color: '#E8530E',
+        color: '#1F1B10',
         marginBottom: 4,
     },
     skillEndpoint: {
@@ -289,4 +302,4 @@ const styles: StyleSheetCSS = {
     },
 };
 
-export default OpenClawPage;
+export default SkillsPage;

@@ -1,7 +1,14 @@
 require('dotenv').config();
 
 const express = require('express');
-const { paymentMiddleware } = require('x402-express');
+const { paymentMiddleware } = require('@x402/express');
+const { x402ResourceServer } = require('@x402/core/server');
+const { x402Facilitator } = require('@x402/core/facilitator');
+const { ExactEvmScheme } = require('@x402/evm/exact/server');
+const { registerExactEvmScheme } = require('@x402/evm/exact/facilitator');
+const { toFacilitatorEvmSigner } = require('@x402/evm');
+const { createWalletClient, http, publicActions, defineChain } = require('viem');
+const { privateKeyToAccount } = require('viem/accounts');
 const Anthropic = require('@anthropic-ai/sdk');
 const { Redis } = require('@upstash/redis');
 const crypto = require('crypto');
@@ -38,12 +45,12 @@ async function storeKey(apiKey, address) {
 // Parse JSON bodies (needed for POST /chat)
 router.use(express.json());
 
-// ─── CORS for x402 (X-PAYMENT header needs preflight) ─
+// ─── CORS for x402 v2 (PAYMENT-SIGNATURE header needs preflight) ─
 router.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, X-PAYMENT, X-API-KEY, Accept');
-    res.header('Access-Control-Expose-Headers', 'X-PAYMENT-RESPONSE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, PAYMENT-SIGNATURE, X-API-KEY, Accept');
+    res.header('Access-Control-Expose-Headers', 'PAYMENT-REQUIRED, PAYMENT-RESPONSE');
     if (req.method === 'OPTIONS') {
         return res.sendStatus(204);
     }
@@ -52,104 +59,122 @@ router.use((req, res, next) => {
 
 // ─── Config ──────────────────────────────────────────
 const payTo = process.env.ADDRESS || '0x101Cd32b9bEEE93845Ead7Bc604a5F1873330acf';
-const network = process.env.NETWORK || 'base';
+const network = 'eip155:4663'; // Robinhood Chain mainnet (CAIP-2)
 
-// PayAI facilitator with JWT auth (reads PAYAI_API_KEY_ID & PAYAI_API_KEY_SECRET from env)
-const { createFacilitatorConfig } = require('@payai/facilitator');
-const facilitatorConfig = process.env.PAYAI_API_KEY_ID
-    ? createFacilitatorConfig(process.env.PAYAI_API_KEY_ID, process.env.PAYAI_API_KEY_SECRET)
-    : { url: process.env.FACILITATOR_URL || 'https://facilitator.payai.network' };
-const BASE_RPC = 'https://mainnet.base.org';
+// ─── Robinhood Chain (verified: chainId 4663 via eth_chainId) ───────
+const ROBINHOOD_RPC = process.env.ROBINHOOD_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com';
+const robinhoodChain = defineChain({
+    id: 4663,
+    name: 'Robinhood Chain',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: { default: { http: [ROBINHOOD_RPC] } },
+    blockExplorers: { default: { name: 'Blockscout', url: 'https://robinhoodchain.blockscout.com' } },
+});
 
-// ─── Token Constants ─────────────────────────────────
-const USDC_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-const WETH_CONTRACT = '0x4200000000000000000000000000000000000006';
-const ONEINCH_ROUTER = '0x111111125421ca6dc452d289314280a0f8842a65';
-const ONEINCH_BASE_URL = 'https://api.1inch.com/swap/v6.1/8453';
-const ONEINCH_API_KEY = process.env.ONEINCH_API_KEY || '';
+// ─── USDG (Global Dollar) — Robinhood Chain's native stablecoin ─────
+// All fields below were verified directly on-chain (not assumed from docs):
+//   name()      -> "Global Dollar"      (eth_call to 0x06fdde03)
+//   decimals()  -> 6                    (eth_call to 0x313ce567)
+//   version     -> "1"                  (brute-forced against on-chain DOMAIN_SEPARATOR())
+//   transferWithAuthorization / receiveWithAuthorization (EIP-3009) confirmed present in bytecode
+const USDG_CONTRACT = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
+const USDG_DECIMALS = 6;
+const USDG_EIP712 = { name: 'Global Dollar', version: '1', decimals: USDG_DECIMALS };
 
-// well-known Base token addresses for the trade endpoint
-const TOKEN_ADDRESSES = {
-    ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // native ETH sentinel
-    USDC: USDC_CONTRACT,
-    WETH: WETH_CONTRACT,
-    DAI: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
-    CBETH: '0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22',
-};
+// Helper: build an explicit AssetAmount price for USDG (dollar-string pricing can't be used —
+// ExactEvmScheme's default money conversion only knows well-established chains, not Robinhood Chain yet).
+function usdgPrice(dollarAmount) {
+    const atomic = BigInt(Math.round(dollarAmount * 10 ** USDG_DECIMALS));
+    return { amount: atomic.toString(), asset: USDG_CONTRACT, extra: USDG_EIP712 };
+}
 
-// ─── x402 Payment Middleware ─────────────────────────
-// Follows the EXACT pattern from https://docs.payai.network/x402/servers/typescript/express
+// ─── Self-hosted x402 facilitator ────────────────────
+// No managed facilitator (Coinbase CDP, PayAI) supports Robinhood Chain yet, so this
+// server verifies AND settles its own payments in-process using a dedicated gas wallet.
+if (!process.env.EVM_PRIVATE_KEY) {
+    console.warn('[x402] EVM_PRIVATE_KEY is not set — the self-hosted facilitator cannot settle payments.');
+}
+const gasWalletAccount = process.env.EVM_PRIVATE_KEY
+    ? privateKeyToAccount(process.env.EVM_PRIVATE_KEY)
+    : undefined;
+
+const facilitator = new x402Facilitator();
+let resourceServer;
+
+if (gasWalletAccount) {
+    const walletClient = createWalletClient({
+        account: gasWalletAccount,
+        chain: robinhoodChain,
+        transport: http(ROBINHOOD_RPC),
+    }).extend(publicActions);
+
+    const facilitatorSigner = toFacilitatorEvmSigner({
+        ...walletClient,
+        address: gasWalletAccount.address,
+    });
+
+    registerExactEvmScheme(facilitator, {
+        signer: facilitatorSigner,
+        networks: network,
+    });
+
+    resourceServer = new x402ResourceServer(facilitator).register(network, new ExactEvmScheme());
+    console.log(`[x402] Self-hosted facilitator ready on Robinhood Chain (gas wallet: ${gasWalletAccount.address})`);
+} else {
+    // No gas wallet configured — resource server still constructed so routes don't crash,
+    // but every payment will fail settlement until EVM_PRIVATE_KEY is set.
+    resourceServer = new x402ResourceServer(facilitator).register(network, new ExactEvmScheme());
+}
+
+// ─── x402 Payment Middleware (v2, self-facilitated) ──
 // Only the routes listed here require payment. Others (like /catalog) pass through.
 const paywallRoutes = {
     'GET /balance/[address]': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Get ETH and USDC balances for any Base address',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get ETH and USDG balances for any Robinhood Chain address',
+        mimeType: 'application/json',
     },
     'GET /tx/[hash]': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Get decoded transaction details for any Base transaction',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get decoded transaction details for any Robinhood Chain transaction',
+        mimeType: 'application/json',
     },
     'GET /price/[token]': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Get current price for ETH or other Base tokens',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get current price for ETH or other tokens',
+        mimeType: 'application/json',
     },
     'GET /wallet/generate': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Generate a fresh Ethereum keypair for Base',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Generate a fresh Ethereum keypair for Robinhood Chain',
+        mimeType: 'application/json',
     },
     'POST /chat': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Chat with the Pinion AI agent ($0.01 per message)',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Chat with the r0x AI agent ($0.01 per message)',
+        mimeType: 'application/json',
     },
     'POST /send': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Construct an unsigned ETH or USDC transfer transaction on Base',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Construct an unsigned ETH or USDG transfer transaction on Robinhood Chain',
+        mimeType: 'application/json',
     },
-    'POST /trade': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Get an unsigned swap transaction via 1inch aggregator on Base',
-        },
-    },
+    // NOTE: /trade is intentionally NOT paywalled — no DEX aggregator supports Robinhood
+    // Chain yet, so the endpoint just returns a 501; charging for it would be dishonest.
     'GET /fund/[address]': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Get wallet balance and funding instructions for Base',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Get wallet balance and funding instructions for Robinhood Chain',
+        mimeType: 'application/json',
     },
     'POST /broadcast': {
-        price: '$0.01',
-        network: network,
-        config: {
-            description: 'Sign and broadcast a transaction on Base',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(0.01) },
+        description: 'Sign and broadcast a transaction on Robinhood Chain',
+        mimeType: 'application/json',
     },
     'POST /unlimited': {
-        price: '$100.00',
-        network: network,
-        config: {
-            description: 'One-time $100 payment for unlimited access to all Pinion OS skills',
-        },
+        accepts: { scheme: 'exact', network, payTo, price: usdgPrice(100) },
+        description: 'One-time $100 payment for unlimited access to all r0x OS skills',
+        mimeType: 'application/json',
     },
 };
 
@@ -168,15 +193,15 @@ router.use(async (req, res, next) => {
 });
 
 // ─── Conditional x402 Middleware ─────────────────────
-const x402 = paymentMiddleware(payTo, paywallRoutes, facilitatorConfig);
+const x402 = paymentMiddleware(paywallRoutes, resourceServer);
 router.use((req, res, next) => {
     if (req.unlimitedAccess) return next();
     x402(req, res, next);
 });
 
-// ─── Helper: call Base RPC ───────────────────────────
-async function baseRpc(method, params = []) {
-    const res = await fetch(BASE_RPC, {
+// ─── Helper: call Robinhood Chain RPC ────────────────
+async function robinhoodRpc(method, params = []) {
+    const res = await fetch(ROBINHOOD_RPC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
@@ -197,14 +222,14 @@ router.post('/unlimited', async (req, res) => {
             });
         }
 
-        const xPayment = req.headers['x-payment'];
-        if (!xPayment) {
-            return res.status(400).json({ error: 'Missing X-PAYMENT header' });
+        const paymentSignature = req.headers['payment-signature'];
+        if (!paymentSignature) {
+            return res.status(400).json({ error: 'Missing PAYMENT-SIGNATURE header' });
         }
 
         let payerAddress;
         try {
-            const decoded = JSON.parse(Buffer.from(xPayment, 'base64').toString('utf-8'));
+            const decoded = JSON.parse(Buffer.from(paymentSignature, 'base64').toString('utf-8'));
             payerAddress = decoded.payload?.authorization?.from;
         } catch {
             return res.status(400).json({ error: 'Could not decode payment header' });
@@ -232,7 +257,7 @@ router.post('/unlimited', async (req, res) => {
             apiKey,
             address: payerAddress.toLowerCase(),
             plan: 'unlimited',
-            price: '$100.00 USDC',
+            price: '$100.00 USDG',
             note: 'Include this key as X-API-KEY header on all future requests to skip x402 payments.',
             timestamp: new Date().toISOString(),
         });
@@ -263,25 +288,25 @@ router.get('/catalog', (req, res) => {
             endpoint: '/skill/balance/:address',
             method: 'GET',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Get ETH and USDC balances for any Base address',
+            description: 'Get ETH and USDG balances for any Robinhood Chain address',
             example: '/skill/balance/0x101Cd32b9bEEE93845Ead7Bc604a5F1873330acf',
         },
         {
             endpoint: '/skill/tx/:hash',
             method: 'GET',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Get decoded transaction details for any Base transaction hash',
+            description: 'Get decoded transaction details for any Robinhood Chain transaction hash',
             example: '/skill/tx/0x...',
         },
         {
             endpoint: '/skill/price/:token',
             method: 'GET',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
             description: 'Get current USD price for ETH or other tokens',
             example: '/skill/price/ETH',
@@ -290,61 +315,61 @@ router.get('/catalog', (req, res) => {
             endpoint: '/skill/wallet/generate',
             method: 'GET',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Generate a fresh Base wallet keypair for your OpenClaw agent',
+            description: 'Generate a fresh Robinhood Chain wallet keypair for your agent',
             example: '/skill/wallet/generate',
         },
         {
             endpoint: '/skill/chat',
             method: 'POST',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Chat with the Pinion AI agent (x402-gated, $0.01 per message)',
+            description: 'Chat with the r0x AI agent (x402-gated, $0.01 per message)',
             example: '/skill/chat',
         },
         {
             endpoint: '/skill/send',
             method: 'POST',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Construct an unsigned ETH or USDC transfer transaction. Client signs and broadcasts.',
+            description: 'Construct an unsigned ETH or USDG transfer transaction. Client signs and broadcasts.',
             example: 'POST /skill/send { "to": "0x...", "amount": "0.1", "token": "ETH" }',
         },
         {
             endpoint: '/skill/trade',
             method: 'POST',
-            price: '$0.01',
-            currency: 'USDC',
+            price: 'unavailable',
+            currency: 'USDG',
             network: network,
-            description: 'Get an unsigned swap transaction via 1inch aggregator. Client signs and broadcasts.',
-            example: 'POST /skill/trade { "src": "USDC", "dst": "ETH", "amount": "10", "from": "0x..." }',
+            description: 'Trade endpoint (currently unavailable — no DEX aggregator supports Robinhood Chain yet, returns 501). Not paywalled.',
+            example: 'POST /skill/trade { "src": "USDG", "dst": "ETH", "amount": "10", "from": "0x..." }',
         },
         {
             endpoint: '/skill/fund/:address',
             method: 'GET',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Get wallet balances and funding instructions for a Base address',
+            description: 'Get wallet balances and funding instructions for a Robinhood Chain address',
             example: '/skill/fund/0x101Cd32b9bEEE93845Ead7Bc604a5F1873330acf',
         },
         {
             endpoint: '/skill/broadcast',
             method: 'POST',
             price: '$0.01',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
-            description: 'Sign and broadcast a transaction on Base. Provide unsigned tx and private key.',
+            description: 'Sign and broadcast a transaction on Robinhood Chain. Provide unsigned tx and private key.',
             example: 'POST /skill/broadcast { "tx": { "to": "0x...", "data": "0x...", "value": "0x0" }, "privateKey": "0x..." }',
         },
         {
             endpoint: '/skill/unlimited',
             method: 'POST',
             price: '$100.00',
-            currency: 'USDC',
+            currency: 'USDG',
             network: network,
             description: 'One-time $100 payment for unlimited access to all skills. Returns an API key.',
             example: 'POST /skill/unlimited (pay via x402, receive API key)',
@@ -359,7 +384,7 @@ router.get('/catalog', (req, res) => {
             example: '/skill/unlimited/verify?key=pk_...',
         },
     ];
-    res.json({ skills, payTo, network });
+    res.json({ skills, payTo, network, chainId: 4663, asset: USDG_CONTRACT });
 });
 
 // ─── Paid Endpoint: Balance Lookup ───────────────────
@@ -373,24 +398,25 @@ router.get('/balance/:address', async (req, res) => {
         }
 
         // ETH balance
-        const ethBalanceHex = await baseRpc('eth_getBalance', [address, 'latest']);
+        const ethBalanceHex = await robinhoodRpc('eth_getBalance', [address, 'latest']);
         const ethBalance = parseInt(ethBalanceHex, 16) / 1e18;
 
-        // USDC balance (balanceOf call)
+        // USDG balance (balanceOf call)
         const balanceOfSelector = '0x70a08231';
         const paddedAddress = address.substring(2).toLowerCase().padStart(64, '0');
-        const usdcBalanceHex = await baseRpc('eth_call', [
-            { to: USDC_CONTRACT, data: `${balanceOfSelector}${paddedAddress}` },
+        const usdgBalanceHex = await robinhoodRpc('eth_call', [
+            { to: USDG_CONTRACT, data: `${balanceOfSelector}${paddedAddress}` },
             'latest',
         ]);
-        const usdcBalance = parseInt(usdcBalanceHex, 16) / 1e6; // USDC has 6 decimals
+        const usdgBalance = parseInt(usdgBalanceHex, 16) / 10 ** USDG_DECIMALS;
 
         res.json({
             address,
-            network: 'base',
+            network: 'robinhood-chain',
+            chainId: 4663,
             balances: {
                 ETH: ethBalance.toFixed(6),
-                USDC: usdcBalance.toFixed(2),
+                USDG: usdgBalance.toFixed(2),
             },
             timestamp: new Date().toISOString(),
         });
@@ -409,16 +435,17 @@ router.get('/tx/:hash', async (req, res) => {
             return res.status(400).json({ error: 'Invalid transaction hash' });
         }
 
-        const tx = await baseRpc('eth_getTransactionByHash', [hash]);
+        const tx = await robinhoodRpc('eth_getTransactionByHash', [hash]);
         if (!tx) {
             return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        const receipt = await baseRpc('eth_getTransactionReceipt', [hash]);
+        const receipt = await robinhoodRpc('eth_getTransactionReceipt', [hash]);
 
         res.json({
             hash: tx.hash,
-            network: 'base',
+            network: 'robinhood-chain',
+            chainId: 4663,
             from: tx.from,
             to: tx.to,
             value: (parseInt(tx.value, 16) / 1e18).toFixed(6) + ' ETH',
@@ -433,45 +460,13 @@ router.get('/tx/:hash', async (req, res) => {
     }
 });
 
-// ─── Price: Birdeye config ──────────────────────────
-const BIRDEYE_API = 'https://public-api.birdeye.so';
-const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY || '';
-
-// Base mainnet contract addresses (checksum format for Birdeye)
-const PRICE_TOKEN_ADDRESSES = {
-    ETH: '0x4200000000000000000000000000000000000006',   // WETH on Base
-    WETH: '0x4200000000000000000000000000000000000006',
-    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
-    DAI: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
-    CBETH: '0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22',
-};
-
+// ─── Price: CoinGecko config ─────────────────────────
+// Robinhood Chain is too new for DEX-price aggregators (Birdeye, etc.) to index yet,
+// so price lookups use CoinGecko's chain-agnostic market data instead of on-chain liquidity.
 const GECKO_MAP = {
     ETH: 'ethereum',
-    USDC: 'usd-coin',
-    WETH: 'weth',
-    CBETH: 'coinbase-wrapped-staked-eth',
-    DAI: 'dai',
-    USDT: 'tether',
+    USDG: 'global-dollar', // verified CoinGecko id for Paxos' Global Dollar (USDG)
 };
-
-async function fetchBirdeyePrice(address) {
-    if (!BIRDEYE_KEY) return null;
-    try {
-        const res = await fetch(`${BIRDEYE_API}/defi/price?address=${address}&include_liquidity=true`, {
-            headers: { 'X-API-KEY': BIRDEYE_KEY, 'x-chain': 'base' },
-        });
-        if (!res.ok) return null;
-        const json = await res.json();
-        if (!json.success || !json.data) return null;
-        return {
-            priceUSD: json.data.value,
-            change24h: json.data.priceChange24h != null ? json.data.priceChange24h.toFixed(2) + '%' : null,
-            liquidity: json.data.liquidity ?? null,
-        };
-    } catch { return null; }
-}
 
 async function fetchCoinGeckoPrice(geckoId) {
     try {
@@ -487,86 +482,18 @@ async function fetchCoinGeckoPrice(geckoId) {
     } catch { return null; }
 }
 
-async function searchBirdeyeToken(keyword) {
-    if (!BIRDEYE_KEY) return null;
-    try {
-        const params = new URLSearchParams({
-            chain: 'base',
-            keyword: keyword,
-            target: 'token',
-            sort_by: 'liquidity',
-            sort_type: 'desc',
-            limit: '1',
-        });
-        const res = await fetch(`${BIRDEYE_API}/defi/v3/search?${params}`, {
-            headers: { 'X-API-KEY': BIRDEYE_KEY, 'x-chain': 'base' },
-        });
-        if (!res.ok) return null;
-        const json = await res.json();
-        if (!json.success || !json.data?.items) return null;
-        const tokenResults = json.data.items.find(i => i.type === 'token');
-        if (!tokenResults?.result?.length) return null;
-        const top = tokenResults.result[0];
-        return {
-            address: top.address,
-            name: top.name,
-            symbol: top.symbol,
-            priceUSD: top.price,
-            change24h: top.price_change_24h_percent != null
-                ? top.price_change_24h_percent.toFixed(2) + '%' : null,
-            liquidity: top.liquidity ?? null,
-        };
-    } catch { return null; }
-}
-
 // ─── Paid Endpoint: Price Lookup ─────────────────────
 router.get('/price/:token', async (req, res) => {
     try {
         const tokenInput = req.params.token;
         const token = tokenInput.toUpperCase();
 
-        const isAddress = /^0x[0-9a-fA-F]{40}$/i.test(tokenInput);
-        const address = isAddress ? tokenInput : PRICE_TOKEN_ADDRESSES[token];
-
-        if (!address) {
-            const searched = await searchBirdeyeToken(tokenInput);
-            if (searched) {
-                return res.json({
-                    token: searched.symbol || tokenInput,
-                    name: searched.name,
-                    address: searched.address,
-                    network: 'base',
-                    priceUSD: searched.priceUSD,
-                    change24h: searched.change24h,
-                    liquidity: searched.liquidity,
-                    source: 'birdeye-search',
-                    timestamp: new Date().toISOString(),
-                });
-            }
-            return res.status(404).json({
-                error: `Token not found: ${tokenInput}`,
-                hint: 'Try a Base contract address (0x...) or a different symbol',
-            });
-        }
-
-        // Try Birdeye first
-        const birdeyeResult = await fetchBirdeyePrice(address);
-        if (birdeyeResult) {
-            return res.json({
-                token: isAddress ? tokenInput : token,
-                network: 'base',
-                priceUSD: birdeyeResult.priceUSD,
-                change24h: birdeyeResult.change24h,
-                liquidity: birdeyeResult.liquidity,
-                source: 'birdeye',
-                timestamp: new Date().toISOString(),
-            });
-        }
-
-        // Fallback to CoinGecko for known symbols
         const geckoId = GECKO_MAP[token];
         if (!geckoId) {
-            return res.status(502).json({ error: 'Price data unavailable (Birdeye unreachable and token not in CoinGecko fallback)' });
+            return res.status(404).json({
+                error: `Token not found: ${tokenInput}`,
+                hint: 'Currently supported: ETH, USDG',
+            });
         }
 
         const geckoResult = await fetchCoinGeckoPrice(geckoId);
@@ -576,7 +503,7 @@ router.get('/price/:token', async (req, res) => {
 
         res.json({
             token,
-            network: 'base',
+            network: 'robinhood-chain',
             priceUSD: geckoResult.priceUSD,
             change24h: geckoResult.change24h,
             source: 'coingecko',
@@ -611,9 +538,9 @@ router.get('/wallet/generate', async (req, res) => {
         res.json({
             address,
             privateKey: '0x' + privKey.toString('hex'),
-            network: 'base',
-            chainId: 8453,
-            note: 'Fund this wallet with ETH for gas and USDC for x402 payments. Keep the private key safe.',
+            network: 'robinhood-chain',
+            chainId: 4663,
+            note: 'Fund this wallet with ETH for gas and USDG for x402 payments. Keep the private key safe.',
             timestamp: new Date().toISOString(),
         });
     } catch (err) {
@@ -627,13 +554,13 @@ const anthropicClient = new Anthropic.default({
     apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const CHAT_SYSTEM_PROMPT = `you are the pinion agent, a friendly and knowledgeable ai assistant embedded in the PinionOS retro desktop environment. you know everything about the pinion protocol and you talk like a casual web3 intern - lowercase, relaxed grammar, like a friend who just happens to know this protocol inside out. you're helpful and enthusiastic but never stiff or corporate. you don't capitalize things unless it's an acronym or proper noun like ERC-8004. you keep responses concise and natural.
+const CHAT_SYSTEM_PROMPT = `you are the r0x agent, a friendly and knowledgeable ai assistant embedded in the r0x OS retro desktop environment. you know everything about the r0x protocol and you talk like a casual web3 intern - lowercase, relaxed grammar, like a friend who just happens to know this protocol inside out. you're helpful and enthusiastic but never stiff or corporate. you don't capitalize things unless it's an acronym or proper noun like ERC-8004. you keep responses concise and natural.
 
 here's what you know:
 
-## what is pinion
+## what is r0x
 
-pinion is an operating primitive for paid autonomous software. it lets machines discover priced capabilities, authorize payment programmatically, invoke execution and continue workflows in a single uninterrupted transaction cycle.
+r0x is the usdg-native operating system for ai agents. we're building economic execution infrastructure on robinhood chain — it lets machines discover priced capabilities, authorize usdg payment programmatically, invoke execution and continue workflows in a single uninterrupted transaction cycle.
 
 it's not a marketplace or a wallet or a billing product. it's an execution primitive that makes economic exchange a first-class operation of modern software systems.
 
@@ -645,11 +572,11 @@ these systems already interact through APIs, message queues, distributed runtime
 
 this gap prevents the emergence of a true machine-native economic layer where systems can dynamically purchase execution capability at runtime.
 
-pinion fixes this by embedding payment-aware execution into the core capability invocation path. instead of negotiating access outside the execution flow, value exchange happens inside the execution path itself.
+r0x fixes this by embedding payment-aware execution into the core capability invocation path. instead of negotiating access outside the execution flow, value exchange happens inside the execution path itself.
 
 ## core concept: economic execution
 
-pinion defines a model called economic execution where invoking a capability includes three atomic actions:
+r0x defines a model called economic execution where invoking a capability includes three atomic actions:
 1. capability request issued by a system or agent
 2. payment authorization generated automatically based on execution policy
 3. capability invocation executed and result returned after payment verification
@@ -682,15 +609,12 @@ handles actual execution after payment is verified:
 ## key integrations
 
 ### x402 payment standard
-x402 is a protocol that brings the HTTP 402 Payment Required status code to life. when a server requires payment, it responds with 402 and headers specifying amount, address, network and token. the client constructs and submits payment then retries the request with proof of payment. pinion implements this natively for all capability invocations.
+x402 is a protocol that brings the HTTP 402 Payment Required status code to life. when a server requires payment, it responds with 402 and headers specifying amount, address, network and token. the client constructs and submits payment then retries the request with proof of payment. r0x implements this natively for all capability invocations.
 
-supported networks: base. solana coming soon.
-
-### openclaw
-openclaw provides execution environments where autonomous agents can discover, acquire and invoke capabilities (called "skills") as modular units of computation. pinion integrates natively with openclaw to add economic execution to its skill-based architecture. every openclaw skill can publish a pricing model through pinion, transforming skills from free internal resources into economically viable services.
+supported networks: robinhood chain (self-hosted facilitator, since no third-party facilitator supports it yet).
 
 ### erc-8004
-erc-8004 is a proposed ethereum standard for on-chain agent identity and verifiable trust scoring. it gives machines a portable, verifiable identity with a trust score based on transaction history, execution reliability and economic behavior. pinion uses erc-8004 for all identity verification and trust-based access control.
+erc-8004 is a proposed ethereum standard for on-chain agent identity and verifiable trust scoring. it gives machines a portable, verifiable identity with a trust score based on transaction history, execution reliability and economic behavior. r0x uses erc-8004 for all identity verification and trust-based access control.
 
 ## web search
 you have access to web search. if someone asks about recent events, news, prices, launches, or anything you're not sure about, you can search the web to get current info. use it whenever it would help give a better answer.
@@ -744,7 +668,7 @@ router.post('/chat', async (req, res) => {
 
 // ─── Paid Endpoint: Send (Unsigned Tx Construction) ──
 // Accepts { to, amount, token } and returns an unsigned transaction object.
-// The client signs with their private key and broadcasts to Base.
+// The client signs with their private key and broadcasts to Robinhood Chain.
 router.post('/send', async (req, res) => {
     try {
         const { to, amount, token } = req.body;
@@ -770,17 +694,17 @@ router.post('/send', async (req, res) => {
                     to,
                     value: '0x' + weiValue.toString(16),
                     data: '0x',
-                    chainId: 8453,
+                    chainId: 4663,
                 },
                 token: 'ETH',
                 amount: parsedAmount.toString(),
-                network: 'base',
-                note: 'Sign this transaction with your private key and broadcast to Base.',
+                network: 'robinhood-chain',
+                note: 'Sign this transaction with your private key and broadcast to Robinhood Chain.',
                 timestamp: new Date().toISOString(),
             });
-        } else if (upperToken === 'USDC') {
+        } else if (upperToken === 'USDG') {
             // ERC-20 transfer(address,uint256)
-            const atomicAmount = BigInt(Math.floor(parsedAmount * 1e6));
+            const atomicAmount = BigInt(Math.floor(parsedAmount * 10 ** USDG_DECIMALS));
             const transferSelector = '0xa9059cbb';
             const paddedTo = to.substring(2).toLowerCase().padStart(64, '0');
             const paddedAmount = atomicAmount.toString(16).padStart(64, '0');
@@ -788,20 +712,20 @@ router.post('/send', async (req, res) => {
 
             res.json({
                 tx: {
-                    to: USDC_CONTRACT,
+                    to: USDG_CONTRACT,
                     value: '0x0',
                     data: calldata,
-                    chainId: 8453,
+                    chainId: 4663,
                 },
-                token: 'USDC',
+                token: 'USDG',
                 amount: parsedAmount.toString(),
-                network: 'base',
-                note: 'Sign this transaction with your private key and broadcast to Base.',
+                network: 'robinhood-chain',
+                note: 'Sign this transaction with your private key and broadcast to Robinhood Chain.',
                 timestamp: new Date().toISOString(),
             });
         } else {
             return res.status(400).json({
-                error: `Unsupported token: ${token}. Use ETH or USDC.`,
+                error: `Unsupported token: ${token}. Use ETH or USDG.`,
             });
         }
     } catch (err) {
@@ -810,130 +734,18 @@ router.post('/send', async (req, res) => {
     }
 });
 
-// ─── Paid Endpoint: Trade (1inch Swap via x402) ──────
-// Accepts { src, dst, amount, from, slippage? } and returns unsigned swap tx
-// from the 1inch aggregator. Also checks token allowance and returns
-// an approve tx if the router doesn't have sufficient approval.
+// ─── Paid Endpoint: Trade ─────────────────────────────
+// Robinhood Chain launched July 2026 and no DEX aggregator (1inch, 0x, etc.)
+// indexes it yet, so this endpoint is disabled rather than silently returning
+// a broken/misleading transaction. It will be wired up to a real router as
+// soon as one exists for chain 4663.
 router.post('/trade', async (req, res) => {
-    try {
-        const { src, dst, amount, from, slippage } = req.body;
-
-        if (!src || !dst || !amount || !from) {
-            return res.status(400).json({ error: 'src, dst, amount, and from are required' });
-        }
-        if (!/^0x[0-9a-fA-F]{40}$/.test(from)) {
-            return res.status(400).json({ error: 'Invalid from address' });
-        }
-        if (!ONEINCH_API_KEY) {
-            return res.status(503).json({ error: 'Trade service is not configured (missing API key)' });
-        }
-
-        const srcUpper = src.toUpperCase();
-        const dstUpper = dst.toUpperCase();
-        const srcAddress = TOKEN_ADDRESSES[srcUpper];
-        const dstAddress = TOKEN_ADDRESSES[dstUpper];
-
-        if (!srcAddress) {
-            return res.status(400).json({
-                error: `Unsupported source token: ${src}`,
-                supported: Object.keys(TOKEN_ADDRESSES),
-            });
-        }
-        if (!dstAddress) {
-            return res.status(400).json({
-                error: `Unsupported destination token: ${dst}`,
-                supported: Object.keys(TOKEN_ADDRESSES),
-            });
-        }
-
-        // convert human-readable amount to atomic units
-        const decimals = srcUpper === 'USDC' ? 6 : 18;
-        const atomicAmount = BigInt(Math.floor(parseFloat(amount) * (10 ** decimals)));
-
-        const headers = {
-            Accept: 'application/json',
-            Authorization: `Bearer ${ONEINCH_API_KEY}`,
-        };
-
-        // check allowance if source is an ERC-20 (not native ETH)
-        let approveTx = null;
-        if (srcUpper !== 'ETH') {
-            const allowanceUrl = `${ONEINCH_BASE_URL}/approve/allowance?` +
-                `tokenAddress=${srcAddress}&walletAddress=${from}`;
-            const allowanceRes = await fetch(allowanceUrl, { headers });
-            if (!allowanceRes.ok) {
-                const body = await allowanceRes.text();
-                return res.status(502).json({ error: '1inch allowance check failed', details: body });
-            }
-            const allowanceData = await allowanceRes.json();
-            const currentAllowance = BigInt(allowanceData.allowance || '0');
-
-            if (currentAllowance < atomicAmount) {
-                // need approval -- get approve tx from 1inch
-                const approveUrl = `${ONEINCH_BASE_URL}/approve/transaction?` +
-                    `tokenAddress=${srcAddress}&amount=${atomicAmount.toString()}`;
-                const approveRes = await fetch(approveUrl, { headers });
-                if (!approveRes.ok) {
-                    const body = await approveRes.text();
-                    return res.status(502).json({ error: '1inch approve call failed', details: body });
-                }
-                const approveData = await approveRes.json();
-                approveTx = {
-                    to: approveData.to,
-                    data: approveData.data,
-                    value: '0x0',
-                    chainId: 8453,
-                };
-            }
-        }
-
-        // get swap tx from 1inch
-        const swapParams = new URLSearchParams({
-            src: srcAddress,
-            dst: dstAddress,
-            amount: atomicAmount.toString(),
-            from: from.toLowerCase(),
-            slippage: (slippage || 1).toString(),
-            disableEstimate: 'true',
-        });
-        const swapUrl = `${ONEINCH_BASE_URL}/swap?${swapParams.toString()}`;
-        const swapRes = await fetch(swapUrl, { headers });
-
-        if (!swapRes.ok) {
-            const body = await swapRes.text();
-            return res.status(502).json({ error: '1inch swap call failed', details: body });
-        }
-
-        const swapData = await swapRes.json();
-        const swapTx = {
-            to: swapData.tx.to,
-            data: swapData.tx.data,
-            value: '0x' + BigInt(swapData.tx.value || '0').toString(16),
-            chainId: 8453,
-        };
-
-        const result = {
-            swap: swapTx,
-            srcToken: srcUpper,
-            dstToken: dstUpper,
-            amount: amount,
-            network: 'base',
-            router: ONEINCH_ROUTER,
-            timestamp: new Date().toISOString(),
-        };
-
-        if (approveTx) {
-            result.approve = approveTx;
-            result.note = 'Sign and broadcast the approve tx first, wait for confirmation, then sign and broadcast the swap tx.';
-        } else {
-            result.note = 'Sign this swap transaction with your private key and broadcast to Base.';
-        }
-
-        res.json(result);
-    } catch (err) {
-        console.error('Trade error:', err.message);
-        res.status(500).json({ error: 'Failed to construct trade transaction', details: err.message });
-    }
+    res.status(501).json({
+        error: 'Trade is not available yet on Robinhood Chain',
+        reason: 'No DEX aggregator currently supports chain 4663 (Robinhood Chain launched July 1, 2026).',
+        network: 'robinhood-chain',
+        chainId: 4663,
+    });
 });
 
 // ─── Paid Endpoint: Fund (Balance + Deposit Info) ────
@@ -946,39 +758,37 @@ router.get('/fund/:address', async (req, res) => {
         }
 
         // ETH balance
-        const ethBalanceHex = await baseRpc('eth_getBalance', [address, 'latest']);
+        const ethBalanceHex = await robinhoodRpc('eth_getBalance', [address, 'latest']);
         const ethBalance = parseInt(ethBalanceHex, 16) / 1e18;
 
-        // USDC balance
+        // USDG balance
         const balanceOfSelector = '0x70a08231';
         const paddedAddress = address.substring(2).toLowerCase().padStart(64, '0');
-        const usdcBalanceHex = await baseRpc('eth_call', [
-            { to: USDC_CONTRACT, data: `${balanceOfSelector}${paddedAddress}` },
+        const usdgBalanceHex = await robinhoodRpc('eth_call', [
+            { to: USDG_CONTRACT, data: `${balanceOfSelector}${paddedAddress}` },
             'latest',
         ]);
-        const usdcBalance = parseInt(usdcBalanceHex, 16) / 1e6;
+        const usdgBalance = parseInt(usdgBalanceHex, 16) / 10 ** USDG_DECIMALS;
 
         res.json({
             address,
-            network: 'base',
-            chainId: 8453,
+            network: 'robinhood-chain',
+            chainId: 4663,
             balances: {
                 ETH: ethBalance.toFixed(6),
-                USDC: usdcBalance.toFixed(2),
+                USDG: usdgBalance.toFixed(2),
             },
             depositAddress: address,
             funding: {
                 steps: [
-                    'Buy ETH on any exchange (Coinbase, Binance, etc.)',
-                    'Withdraw ETH to the address above on the Base network',
-                    'Swap some ETH to USDC using the /trade skill or any DEX',
-                    'ETH is needed for gas, USDC is needed for x402 payments',
+                    'Acquire ETH and withdraw it to the address above on Robinhood Chain (chain ID 4663)',
+                    'Acquire USDG (Global Dollar) and send it to the address above on Robinhood Chain',
+                    'ETH is needed for gas, USDG is needed for x402 payments',
                 ],
                 minimumRecommended: {
                     ETH: '0.001 ETH (for gas fees)',
-                    USDC: '1.00 USDC (for ~100 skill calls at $0.01 each)',
+                    USDG: '1.00 USDG (for ~100 skill calls at $0.01 each)',
                 },
-                bridgeUrl: 'https://bridge.base.org',
             },
             timestamp: new Date().toISOString(),
         });
@@ -1001,14 +811,14 @@ router.post('/broadcast', async (req, res) => {
             return res.status(400).json({ error: 'privateKey must be a 66-character hex string starting with 0x' });
         }
 
-        const provider = new ethers.JsonRpcProvider(BASE_RPC, 8453);
+        const provider = new ethers.JsonRpcProvider(ROBINHOOD_RPC, 4663);
         const wallet = new ethers.Wallet(privateKey, provider);
 
         const txRequest = {
             to: tx.to,
             data: tx.data || '0x',
             value: tx.value || '0x0',
-            chainId: 8453,
+            chainId: 4663,
         };
 
         if (tx.gasLimit) txRequest.gasLimit = tx.gasLimit;
@@ -1021,9 +831,9 @@ router.post('/broadcast', async (req, res) => {
             txHash: sentTx.hash,
             from: wallet.address,
             to: txRequest.to,
-            network: 'base',
-            chainId: 8453,
-            explorer: `https://basescan.org/tx/${sentTx.hash}`,
+            network: 'robinhood-chain',
+            chainId: 4663,
+            explorer: `https://robinhoodchain.blockscout.com/tx/${sentTx.hash}`,
             note: 'Transaction broadcast successfully. Check explorer for confirmation.',
             timestamp: new Date().toISOString(),
         });
@@ -1039,4 +849,86 @@ router.post('/broadcast', async (req, res) => {
     }
 });
 
+// ─── OpenAPI Spec (x402scan discovery, preferred over /.well-known/x402) ─
+// Spec: https://github.com/Merit-Systems/x402scan/blob/main/docs/DISCOVERY.md
+const REQUEST_BODIES = {
+    'POST /chat': {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['messages'], properties: {
+            messages: { type: 'array', items: { type: 'object', properties: { role: { type: 'string' }, content: { type: 'string' } } } },
+        } } } },
+    },
+    'POST /send': {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['to', 'amount', 'token'], properties: {
+            to: { type: 'string', description: 'Recipient address (0x...)' },
+            amount: { type: 'string', description: 'Human-readable amount' },
+            token: { type: 'string', enum: ['ETH', 'USDG'] },
+        } } } },
+    },
+    'POST /broadcast': {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['tx', 'privateKey'], properties: {
+            tx: { type: 'object', properties: { to: { type: 'string' }, data: { type: 'string' }, value: { type: 'string' } } },
+            privateKey: { type: 'string', description: '66-char hex string starting with 0x' },
+        } } } },
+    },
+};
+
+function buildOpenApiSpec(baseUrl) {
+    const paths = {};
+
+    for (const [routeKey, cfg] of Object.entries(paywallRoutes)) {
+        const [method, rawPath] = routeKey.split(' ');
+        const httpMethod = method.toLowerCase();
+        const openApiPath = '/skill' + rawPath.replace(/\[(\w+)\]/g, '{$1}');
+
+        const accepts = Array.isArray(cfg.accepts) ? cfg.accepts : [cfg.accepts];
+        const primary = accepts[0];
+        const dollarAmount = (Number(primary.price.amount) / 10 ** USDG_DECIMALS).toFixed(2);
+
+        const parameters = [...rawPath.matchAll(/\[(\w+)\]/g)].map(([, name]) => ({
+            name,
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+        }));
+
+        const operation = {
+            summary: cfg.description,
+            operationId: `${httpMethod}_${rawPath.replace(/[^\w]+/g, '_').replace(/^_|_$/g, '')}`,
+            ...(parameters.length ? { parameters } : {}),
+            ...(REQUEST_BODIES[routeKey] ? { requestBody: REQUEST_BODIES[routeKey] } : {}),
+            'x-payment-info': {
+                protocols: ['x402'],
+                price: { mode: 'fixed', currency: 'USD', amount: dollarAmount },
+            },
+            responses: {
+                200: { description: 'Success', content: { 'application/json': { schema: { type: 'object' } } } },
+                402: { description: 'Payment required (x402)' },
+            },
+        };
+
+        paths[openApiPath] = { ...(paths[openApiPath] || {}), [httpMethod]: operation };
+    }
+
+    return {
+        openapi: '3.1.0',
+        info: {
+            title: 'r0x Skills',
+            version: '2.0.0',
+            description:
+                'On-chain intelligence, transactions and wallet tools on Robinhood Chain, paywalled via x402 USDG micropayments ($0.01 each). Self-facilitated — verified and settled directly by this server.',
+        },
+        servers: [{ url: baseUrl }],
+        paths,
+        'x-discovery': {
+            ownershipProofs: [
+                '0x981d16b1a52bd1099e58e0348fa9e48242ac8190b6dc1c3ebe6352b3db677b806ddad970547768609f40a9c9f81d7ba3e0c2b4fbbfbef77f8af280c072548dd31b',
+            ],
+        },
+    };
+}
+
 module.exports = router;
+module.exports.buildOpenApiSpec = buildOpenApiSpec;

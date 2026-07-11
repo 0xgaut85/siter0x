@@ -7,7 +7,7 @@ const colors = {
     blue: '#0000a3',
     darkBlue: '#0000aa',
     red: '#ff0000',
-    orange: '#E8530E',
+    orange: '#CEF506',
     charcoal: '#1a1a1a',
     mediumGray: '#4D4D4D',
 } as const;

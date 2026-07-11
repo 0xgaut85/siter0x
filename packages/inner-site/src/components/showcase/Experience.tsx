@@ -18,11 +18,12 @@ const Architecture: React.FC<ArchitectureProps> = (props) => {
             </div>
             <div className="text-block">
                 <p>
-                    Pinion is organized around three discrete functional layers.
-                    Each layer is responsible for a clearly defined stage of the
-                    economic execution cycle. Together, these layers ensure that
-                    capability discovery, payment verification and execution
-                    invocation happen atomically and reliably.
+                    r0x is organized around three discrete functional layers
+                    that together form the USDG-native operating system for
+                    AI agents on Robinhood Chain. Each layer is responsible
+                    for a clearly defined stage of the economic execution
+                    cycle. Capability discovery, payment verification and
+                    execution invocation happen atomically and reliably.
                 </p>
             </div>
 
@@ -217,12 +218,12 @@ const styles: StyleSheetCSS = {
         borderBottom: '1px solid #ccc',
     },
     layerBadge: {
-        backgroundColor: '#E8530E',
+        backgroundColor: '#CEF506',
         padding: '4px 12px',
         marginRight: 16,
     },
     layerBadgeText: {
-        color: '#fff',
+        color: '#1F1B10',
         fontSize: 11,
         letterSpacing: 1,
     },
@@ -246,7 +247,7 @@ const styles: StyleSheetCSS = {
         fontSize: 11,
         lineHeight: 1.4,
         backgroundColor: '#1a1a1a',
-        color: '#E8530E',
+        color: '#CEF506',
         padding: 16,
         overflow: 'auto',
         whiteSpace: 'pre',
