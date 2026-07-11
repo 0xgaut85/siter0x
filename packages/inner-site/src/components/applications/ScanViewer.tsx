@@ -29,9 +29,9 @@ const EXPLORER_BASE = 'https://robinhoodchain.blockscout.com/tx/';
 const POLL_MS = 5000;
 
 function shorten(value: string | null, head = 6, tail = 4): string {
-    if (!value) return '—';
+    if (!value) return '-';
     if (value.length <= head + tail + 2) return value;
-    return `${value.slice(0, head)}…${value.slice(-tail)}`;
+    return `${value.slice(0, head)}...${value.slice(-tail)}`;
 }
 
 function timeAgo(iso: string): string {
@@ -95,7 +95,7 @@ const ScanViewer: React.FC<ScanViewerProps> = (props) => {
             minimizeWindow={props.onMinimize}
             onWidthChange={setWidth}
             onHeightChange={setHeight}
-            bottomLeftText={'r0x Scan v1.0 — live facilitator settlements'}
+            bottomLeftText={'r0x Scan v1.0 : live facilitator settlements'}
         >
             <div style={styles.container}>
                 <div style={styles.header}>
@@ -108,7 +108,7 @@ const ScanViewer: React.FC<ScanViewerProps> = (props) => {
                                 !isLive && styles.statusDotOffline
                             )}
                         >
-                            ●
+                            {'\u25CF'}
                         </span>{' '}
                         {isLive ? 'LIVE' : 'OFFLINE'}
                     </span>
@@ -116,33 +116,32 @@ const ScanViewer: React.FC<ScanViewerProps> = (props) => {
 
                 <p style={styles.subtitle}>
                     Every real payment settled through the self-hosted x402 facilitator on
-                    Robinhood Chain, tracked as it happens. No sample data — this table is
-                    empty until the first real transaction clears.
+                    Robinhood Chain, tracked as it happens.
                 </p>
 
                 <div style={styles.statsBar}>
                     <div style={styles.statCard}>
                         <span style={styles.statLabel}>TOTAL TXNS</span>
                         <span style={styles.statValue}>
-                            {stats ? stats.totalCount.toLocaleString() : '—'}
+                            {stats ? stats.totalCount.toLocaleString() : '-'}
                         </span>
                     </div>
                     <div style={styles.statCard}>
                         <span style={styles.statLabel}>TOTAL VOLUME</span>
                         <span style={styles.statValue}>
-                            {stats ? `${stats.totalVolumeUsdg.toFixed(2)} USDG` : '—'}
+                            {stats ? `${stats.totalVolumeUsdg.toFixed(2)} USDG` : '-'}
                         </span>
                     </div>
                     <div style={styles.statCard}>
                         <span style={styles.statLabel}>AVG TXN</span>
                         <span style={styles.statValue}>
-                            {stats ? `${stats.avgAmountUsdg.toFixed(4)} USDG` : '—'}
+                            {stats ? `${stats.avgAmountUsdg.toFixed(4)} USDG` : '-'}
                         </span>
                     </div>
                     <div style={styles.statCard}>
                         <span style={styles.statLabel}>LAST 24H</span>
                         <span style={styles.statValue}>
-                            {stats ? stats.last24hCount.toLocaleString() : '—'}
+                            {stats ? stats.last24hCount.toLocaleString() : '-'}
                         </span>
                     </div>
                 </div>
@@ -167,7 +166,7 @@ const ScanViewer: React.FC<ScanViewerProps> = (props) => {
                     )}
                     {!error && stats?.dbConnected && transactions.length === 0 && (
                         <div style={styles.emptyState}>
-                            no transactions yet — waiting for the first real payment to settle.
+                            no transactions yet. waiting for the first real payment to settle.
                         </div>
                     )}
                     {transactions.map((tx, i) => (
@@ -183,13 +182,13 @@ const ScanViewer: React.FC<ScanViewerProps> = (props) => {
                                 {timeAgo(tx.createdAt)}
                             </span>
                             <span style={Object.assign({}, styles.feedCellEndpoint, styles.feedColEndpoint)}>
-                                {tx.endpoint || '—'}
+                                {tx.endpoint || '-'}
                             </span>
                             <span style={Object.assign({}, styles.feedCell, styles.feedColAddr)}>
                                 {shorten(tx.payer)}
                             </span>
                             <span style={Object.assign({}, styles.feedCellAmount, styles.feedColAmount)}>
-                                {tx.amountUsdg !== null ? `${tx.amountUsdg.toFixed(4)} USDG` : '—'}
+                                {tx.amountUsdg !== null ? `${tx.amountUsdg.toFixed(4)} USDG` : '-'}
                             </span>
                             <a
                                 href={`${EXPLORER_BASE}${tx.txHash}`}
@@ -209,7 +208,7 @@ const ScanViewer: React.FC<ScanViewerProps> = (props) => {
                             ? `updated ${lastUpdated.toLocaleTimeString('en-US', { hour12: false })}`
                             : 'connecting...'}
                     </span>
-                    <span style={styles.footerText}>facilitator: self-hosted · network: Robinhood Chain · asset: USDG</span>
+                    <span style={styles.footerText}>facilitator: self-hosted : network: Robinhood Chain : asset: USDG</span>
                 </div>
             </div>
         </Window>
