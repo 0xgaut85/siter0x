@@ -19,7 +19,6 @@ const NAV_ITEMS: NavItem[] = [
             { label: 'X/Twitter', href: 'https://x.com/projectR0X' },
             { label: 'Community', href: '#' },
             { label: 'Docs', href: '/os/' },
-            { label: 'x402 Server', href: 'https://www.x402scan.com/server/49a688db-0234-4609-948c-c3eee1719e5d' },
         ],
     },
 ];
