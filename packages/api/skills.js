@@ -12,6 +12,7 @@ const { privateKeyToAccount } = require('viem/accounts');
 const OpenAI = require('openai');
 const { Redis } = require('@upstash/redis');
 const crypto = require('crypto');
+const { recordTransaction } = require('./db');
 
 const router = express.Router();
 
@@ -88,10 +89,9 @@ function usdgPrice(dollarAmount) {
     return { amount: atomic.toString(), asset: USDG_CONTRACT, extra: USDG_EIP712 };
 }
 
-// ─── Self-hosted x402 facilitator ────────────────────
-// r0x is the first native x402 facilitator on Robinhood Chain — no other facilitator
-// supports this chain yet, so this server verifies AND settles its own payments
-// in-process using a dedicated gas wallet.
+// ─── Official r0x facilitator ────────────────────────
+// Verifies AND settles every x402 payment in-process using a dedicated gas
+// wallet, so any agent can pay for a skill and get a result in one call.
 if (!process.env.EVM_PRIVATE_KEY) {
     console.warn('[x402] EVM_PRIVATE_KEY is not set — the self-hosted facilitator cannot settle payments.');
 }
@@ -126,6 +126,32 @@ if (gasWalletAccount) {
     // but every payment will fail settlement until EVM_PRIVATE_KEY is set.
     resourceServer = new x402ResourceServer(facilitator).register(network, new ExactEvmScheme());
 }
+
+// ─── r0x Scan: record every real settlement (no mock data) ─
+// Fires only after the facilitator has actually settled a payment on-chain.
+resourceServer.onAfterSettle(async (ctx) => {
+    try {
+        const { result, requirements, transportContext } = ctx;
+        if (!result || !result.success) return;
+
+        const request = transportContext && transportContext.request;
+        const endpoint = request && request.method && request.path
+            ? `${request.method} ${request.path}`
+            : null;
+
+        await recordTransaction({
+            txHash: result.transaction,
+            network: result.network,
+            endpoint,
+            payer: result.payer,
+            payTo: requirements.payTo,
+            asset: requirements.asset,
+            amountAtomic: result.amount || requirements.amount,
+        });
+    } catch (err) {
+        console.error('[r0x-scan] failed to record settled transaction:', err.message);
+    }
+});
 
 // ─── x402 Payment Middleware (v2, self-facilitated) ──
 // Only the routes listed here require payment. Others (like /catalog) pass through.
@@ -613,7 +639,7 @@ handles actual execution after payment is verified:
 ### x402 payment standard
 x402 is a protocol that brings the HTTP 402 Payment Required status code to life. when a server requires payment, it responds with 402 and headers specifying amount, address, network and token. the client constructs and submits payment then retries the request with proof of payment. r0x implements this natively for all capability invocations.
 
-supported network: robinhood chain. r0x runs the first native x402 facilitator built for robinhood chain — no other facilitator supports this chain yet, so r0x verifies and settles every payment itself, in-process, through its own gas wallet. no middleman, no dependency on anyone else's infrastructure.
+supported network: robinhood chain. r0x runs the official x402 facilitator for robinhood chain, and any agent can use it right now — discover a priced capability, sign a payment and settle it on-chain in one uninterrupted call. verification and settlement happen in-process, through r0x's own gas wallet.
 
 ### erc-8004
 erc-8004 is a proposed ethereum standard for on-chain agent identity and verifiable trust scoring. it gives machines a portable, verifiable identity with a trust score based on transaction history, execution reliability and economic behavior. r0x uses erc-8004 for all identity verification and trust-based access control.

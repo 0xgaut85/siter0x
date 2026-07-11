@@ -25,9 +25,9 @@ const X402Page: React.FC<X402PageProps> = (props) => {
                     behind on-chain payments. When a server responds with 402
                     it includes structured payment requirements. The client
                     signs a USDG transfer and retries with proof attached.
-                    No accounts, no API keys. r0x runs x402 protocol v2 with a
-                    self-hosted facilitator, since no third-party facilitator
-                    supports Robinhood Chain yet.
+                    No accounts, no API keys. r0x runs the official x402 v2
+                    facilitator for Robinhood Chain, so any agent can pay for
+                    a skill and get a result in one round trip.
                 </p>
             </div>
 
@@ -86,8 +86,8 @@ const X402Page: React.FC<X402PageProps> = (props) => {
             <div className="text-block">
                 <p>
                     Every r0x skill endpoint is protected by
-                    @x402/express middleware backed by r0x's own facilitator.
-                    Here is the step-by-step flow for a real request.
+                    @x402/express middleware backed by the official r0x
+                    facilitator. Here is the step-by-step flow for a real request.
                 </p>
                 <br />
                 <div style={styles.stepCard}>
@@ -130,7 +130,7 @@ const X402Page: React.FC<X402PageProps> = (props) => {
                             The client retries the same request with a
                             PAYMENT-SIGNATURE header containing a base64-encoded
                             JSON payload (signature + authorization params).
-                            r0x's self-hosted facilitator verifies the signature,
+                            The r0x facilitator verifies the signature,
                             settles the transferWithAuthorization call on-chain
                             using its own gas wallet, then the server returns
                             the skill result.
@@ -191,14 +191,14 @@ const X402Page: React.FC<X402PageProps> = (props) => {
             <div className="text-block">
                 <p>
                     On the server side, a single middleware call protects
-                    all routes, backed by a self-hosted resource server +
+                    all routes, backed by the r0x resource server and
                     facilitator. Bracket syntax marks dynamic segments.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
 {`const { paymentMiddleware } = require('@x402/express');
-// resourceServer wraps a self-hosted x402Facilitator, see the
-// "Server: Self-Hosted Facilitator" section on the Developers page.
+// resourceServer wraps the r0x x402Facilitator, see the
+// "Server: The r0x Facilitator" section on the Developers page.
 
 app.use(
   paymentMiddleware(
@@ -231,8 +231,8 @@ app.use(
                         All r0x skills settle on Robinhood Chain (chain ID 4663,
                         an Arbitrum Orbit L2). USDG (Global Dollar) contract:
                         0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168 (6 decimals).
-                        No managed facilitator supports this chain yet, so r0x
-                        verifies and settles its own payments.
+                        r0x verifies and settles every payment itself, in-process,
+                        through its own gas wallet.
                     </p>
                 </div>
             </div>

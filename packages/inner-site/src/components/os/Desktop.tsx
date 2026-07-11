@@ -12,6 +12,7 @@ import ConnectWallet from '../applications/ConnectWallet';
 import ServerViewer from '../applications/ServerViewer';
 import FacilitatorViewer from '../applications/FacilitatorViewer';
 import PinionToken from '../applications/PinionToken';
+import ScanViewer from '../applications/ScanViewer';
 
 export interface DesktopProps {}
 
@@ -54,6 +55,12 @@ const APPLICATIONS: {
         name: 'r0x Facilitator',
         shortcutIcon: 'facilitatorIcon',
         component: FacilitatorViewer,
+    },
+    scan: {
+        key: 'scan',
+        name: 'r0x Scan',
+        shortcutIcon: 'r0xScanIcon',
+        component: ScanViewer,
     },
     credits: {
         key: 'credits',

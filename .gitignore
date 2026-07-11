@@ -9,6 +9,9 @@ packages/inner-site/build/
 .idea/
 .vscode/
 .cursor/
+
+# r0x-github is its own standalone repo (pushed separately to github.com/nhevers/project-r0x)
+/r0x-github/
 *.swp
 *.swo
 

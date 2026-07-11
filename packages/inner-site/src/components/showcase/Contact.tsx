@@ -31,10 +31,10 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 </p>
                 <br />
                 <p>
-                    The server runs a <b>self-hosted facilitator</b> using{' '}
-                    <b>@x402/express</b> middleware (x402 protocol v2). No third-party
-                    facilitator supports Robinhood Chain yet, so r0x verifies and settles
-                    its own payments in-process. Clients receive a{' '}
+                    r0x runs the <b>official x402 facilitator</b> for Robinhood Chain,
+                    using <b>@x402/express</b> middleware (x402 protocol v2). Every
+                    payment is verified and settled in-process, so any agent can call a
+                    skill and get a result in one round trip. Clients receive a{' '}
                     <code style={styles.inlineCode}>402 Payment Required</code>{' '}
                     response with a <code style={styles.inlineCode}>PAYMENT-REQUIRED</code> header,
                     sign an EIP-3009 <code style={styles.inlineCode}>TransferWithAuthorization</code>,
@@ -91,15 +91,15 @@ const Developers: React.FC<DevelopersProps> = (props) => {
             <div style={styles.headerContainer}>
                 <div style={styles.header}>
                     <div style={styles.headerRow}>
-                        <h2>Try It: Run a Real Test Transaction</h2>
+                        <h2>Use the Facilitator</h2>
                     </div>
                 </div>
             </div>
             <div className="text-block">
                 <p>
-                    Anyone can complete a live payment against r0x's
-                    facilitator right now. All you need is a wallet holding a
-                    small amount of <b>USDG on Robinhood Chain</b>: get some
+                    Any agent with a wallet holding a small amount of{' '}
+                    <b>USDG on Robinhood Chain</b> can call a skill directly
+                    through the official r0x facilitator, right now. Get USDG
                     via{' '}
                     <a href="https://across.to" target="_blank" rel="noopener noreferrer" style={styles.link}>
                         Across
@@ -112,12 +112,14 @@ const Developers: React.FC<DevelopersProps> = (props) => {
                 </p>
                 <br />
                 <p>
-                    The script below signs a real EIP-3009{' '}
+                    The script below signs an EIP-3009{' '}
                     <code style={styles.inlineCode}>TransferWithAuthorization</code>{' '}
-                    and lets r0x's self-hosted facilitator verify and settle
-                    it on-chain, the exact same flow described above, no
-                    mocking. It's checked into the repo at{' '}
-                    <code style={styles.inlineCode}>packages/api/scripts/test-transaction.js</code>.
+                    and lets the r0x facilitator verify and settle it
+                    on-chain — the same flow described above. It's checked
+                    into the repo at{' '}
+                    <code style={styles.inlineCode}>packages/api/scripts/test-transaction.js</code>,
+                    and ships standalone in the{' '}
+                    <b>r0x-os</b> SDK.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
@@ -150,19 +152,18 @@ const Developers: React.FC<DevelopersProps> = (props) => {
             <div style={styles.headerContainer}>
                 <div style={styles.header}>
                     <div style={styles.headerRow}>
-                        <h2>Server: Self-Hosted Facilitator</h2>
+                        <h2>Server: The r0x Facilitator</h2>
                     </div>
                 </div>
             </div>
             <div className="text-block">
                 <p>
-                    r0x is the first native x402 facilitator on Robinhood Chain — no
-                    managed facilitator supports this chain yet, so r0x built its own
-                    using{' '}
+                    r0x is the official x402 facilitator for Robinhood Chain, built on{' '}
                     <code style={styles.inlineCode}>@x402/core</code>,{' '}
                     <code style={styles.inlineCode}>@x402/evm</code> and{' '}
                     <code style={styles.inlineCode}>@x402/express</code>. A dedicated gas
-                    wallet signs and submits settlement transactions directly.
+                    wallet signs and submits settlement transactions directly, so any
+                    agent or client can call it right now.
                 </p>
                 <br />
                 <pre style={styles.codeBlock}>
@@ -295,22 +296,22 @@ if (res.status === 402) {
                 </pre>
                 <br />
                 <pre style={styles.codeBlock}>
-{`import { PinionClient } from 'r0x-os';
+{`import { R0xClient } from 'r0x-os';
 
-const client = new PinionClient({
-  privateKey: process.env.PINION_PRIVATE_KEY,
+const client = new R0xClient({
+  privateKey: process.env.R0X_PRIVATE_KEY,
 });
 
 // check ETH price ($0.01 USDG per call)
-const price = await client.skills.price('ETH');
+const { data: price } = await client.price('ETH');
 
 // send USDG to an address
-const tx = await client.skills.send(
+const { data: sendTx } = await client.send(
   '0xRecipient...', '10', 'USDG'
 );
 
 // fetch decoded transaction details
-const tx = await client.skills.tx('0x...');`}
+const { data: tx } = await client.tx('0x...');`}
                 </pre>
             </div>
 

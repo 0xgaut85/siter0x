@@ -6,6 +6,8 @@ const express = require('express');
 const path = require('path');
 const apiRouter = require('./packages/api/server.js');
 const skillRouter = require('./packages/api/skills.js');
+const scanRouter = require('./packages/api/scan.js');
+const { initDb } = require('./packages/api/db.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +17,9 @@ app.use(express.json());
 
 // Mount API routes at /api
 app.use('/api', apiRouter);
+
+// Mount r0x Scan (real settled transaction feed + stats) at /api/scan
+app.use('/api/scan', scanRouter);
 
 // Mount x402-paywalled skill API at /skill
 app.use('/skill', skillRouter);
@@ -60,7 +65,7 @@ app.get('/.well-known/x402', (req, res) => {
         instructions:
             '# r0x Skills\n\n' +
             'On-chain intelligence, transactions and wallet tools on Robinhood Chain, paywalled via x402 USDG micropayments ($0.01 each). ' +
-            'Self-facilitated: this server verifies and settles its own payments (no third-party facilitator supports Robinhood Chain yet).\n\n' +
+            'Runs on the official r0x facilitator: every payment is verified and settled in-process, so any agent can call a skill and get a result in one round trip.\n\n' +
             '## Endpoints\n' +
             '- **Balance Lookup** - ETH + USDG balances for any Robinhood Chain address\n' +
             '- **Transaction Details** - Decoded tx info for any Robinhood Chain tx hash\n' +
@@ -91,10 +96,15 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'packages/3d-site/public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`r0x unified server running on port ${PORT}`);
-    console.log(`  3d-site:    http://localhost:${PORT}/`);
-    console.log(`  inner-site: http://localhost:${PORT}/os/`);
-    console.log(`  api:        http://localhost:${PORT}/api/`);
-    console.log(`  skill:      http://localhost:${PORT}/skill/catalog`);
-});
+initDb()
+    .catch((err) => console.error('[r0x-scan] Postgres init failed:', err.message))
+    .finally(() => {
+        app.listen(PORT, () => {
+            console.log(`r0x unified server running on port ${PORT}`);
+            console.log(`  3d-site:    http://localhost:${PORT}/`);
+            console.log(`  inner-site: http://localhost:${PORT}/os/`);
+            console.log(`  api:        http://localhost:${PORT}/api/`);
+            console.log(`  scan:       http://localhost:${PORT}/api/scan/stats`);
+            console.log(`  skill:      http://localhost:${PORT}/skill/catalog`);
+        });
+    });

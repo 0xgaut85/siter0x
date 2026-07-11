@@ -41,10 +41,10 @@ const ERC8004Page: React.FC<ERC8004PageProps> = (props) => {
                     <p>
                         <b>Not in production.</b> r0x currently uses x402
                         for payments and plain HTTP skills for discovery. Both
-                        are live on Robinhood Chain, self-facilitated since no
-                        third-party facilitator supports the chain yet.
-                        ERC-8004 is the planned third layer that would add
-                        identity verification and trust scoring to the stack.
+                        are live on Robinhood Chain through the official r0x
+                        facilitator. ERC-8004 is the planned third layer that
+                        would add identity verification and trust scoring to
+                        the stack.
                     </p>
                 </div>
             </div>

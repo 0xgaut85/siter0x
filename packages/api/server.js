@@ -68,7 +68,7 @@ handles actual execution after payment is verified:
 ### x402 payment standard
 x402 is a protocol that brings the HTTP 402 Payment Required status code to life. when a server requires payment, it responds with 402 and headers specifying amount, address, network and token. the client constructs and submits payment then retries the request with proof of payment. r0x implements this natively for all capability invocations.
 
-supported network: robinhood chain. r0x runs the first native x402 facilitator built for robinhood chain — no other facilitator supports this chain yet, so r0x verifies and settles every payment itself, in-process, through its own gas wallet. no middleman, no dependency on anyone else's infrastructure.
+supported network: robinhood chain. r0x runs the official x402 facilitator for robinhood chain, and any agent can use it right now — discover a priced capability, sign a payment and settle it on-chain in one uninterrupted call. verification and settlement happen in-process, through r0x's own gas wallet.
 
 ### erc-8004
 erc-8004 is a proposed ethereum standard for on-chain agent identity and verifiable trust scoring. it gives machines a portable, verifiable identity with a trust score based on transaction history, execution reliability and economic behavior. r0x uses erc-8004 for all identity verification and trust-based access control.

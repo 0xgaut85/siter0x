@@ -29,6 +29,8 @@ import windowServerIcon from './windowServerIcon.png';
 import facilitatorIcon from './facilitatorIcon.png';
 import windowFacilitatorIcon from './windowFacilitatorIcon.png';
 import pinionTokenIcon from './pinionTokenIcon.png';
+import r0xScanIcon from './r0xScanIcon.png';
+import windowR0xScanIcon from './windowR0xScanIcon.png';
 
 const icons = {
     windowResize: windowResize,
@@ -60,6 +62,8 @@ const icons = {
     facilitatorIcon: facilitatorIcon,
     windowFacilitatorIcon: windowFacilitatorIcon,
     pinionTokenIcon: pinionTokenIcon,
+    r0xScanIcon: r0xScanIcon,
+    windowR0xScanIcon: windowR0xScanIcon,
 };
 
 export type IconName = keyof typeof icons;
