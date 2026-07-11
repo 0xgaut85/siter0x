@@ -24,12 +24,13 @@ const PinionToken: React.FC<PinionTokenProps> = (props) => {
             bottomLeftText="dexscreener.com"
         >
             <div style={styles.container}>
-                <div style={styles.fallback}>
-                    <p style={styles.fallbackTitle}>$r0x is not live yet</p>
-                    <p style={styles.fallbackSubtitle}>
-                        DEX Screener listing coming soon.
-                    </p>
-                </div>
+                <iframe
+                    src="https://dexscreener.com/robinhood/0x5c46b4b4f62c91980a8f4008cd82d32921e786e2?embed=1&theme=dark&trades=0&info=0"
+                    title="$r0x DEX Screener"
+                    width="100%"
+                    height="100%"
+                    style={styles.iframe}
+                />
             </div>
         </Window>
     );
@@ -41,22 +42,8 @@ const styles: StyleSheetCSS = {
         backgroundColor: '#0d0d0d',
         overflow: 'hidden',
     },
-    fallback: {
-        flex: 1,
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-    },
-    fallbackTitle: {
-        fontFamily: 'monospace',
-        fontSize: 14,
-        color: '#CEF506',
-    },
-    fallbackSubtitle: {
-        fontFamily: 'monospace',
-        fontSize: 12,
-        color: '#ccc',
+    iframe: {
+        border: 'none',
     },
 };
 
