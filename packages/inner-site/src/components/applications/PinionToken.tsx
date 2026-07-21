@@ -24,8 +24,8 @@ const PinionToken: React.FC<PinionTokenProps> = (props) => {
         >
             <div style={styles.container}>
                 <div style={styles.fallback}>
-                    <p style={styles.fallbackTitle}>$r0x</p>
-                    <p style={styles.fallbackSubtitle}>Live on Uniswap V3, Robinhood Chain.</p>
+                    <p style={styles.fallbackTitle}>$r0x listing coming soon</p>
+                    <p style={styles.fallbackSubtitle}>The $r0x token is not live yet.</p>
                 </div>
             </div>
         </Window>
