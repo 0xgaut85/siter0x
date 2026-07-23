@@ -31,6 +31,8 @@ import windowFacilitatorIcon from './windowFacilitatorIcon.png';
 import pinionTokenIcon from './pinionTokenIcon.png';
 import r0xScanIcon from './r0xScanIcon.png';
 import windowR0xScanIcon from './windowR0xScanIcon.png';
+import tradingIcon from './tradingIcon.png';
+import windowTradingIcon from './windowTradingIcon.png';
 
 const icons = {
     windowResize: windowResize,
@@ -64,6 +66,8 @@ const icons = {
     pinionTokenIcon: pinionTokenIcon,
     r0xScanIcon: r0xScanIcon,
     windowR0xScanIcon: windowR0xScanIcon,
+    tradingIcon: tradingIcon,
+    windowTradingIcon: windowTradingIcon,
 };
 
 export type IconName = keyof typeof icons;

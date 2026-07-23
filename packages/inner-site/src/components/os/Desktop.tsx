@@ -13,6 +13,7 @@ import ServerViewer from '../applications/ServerViewer';
 import FacilitatorViewer from '../applications/FacilitatorViewer';
 import PinionToken from '../applications/PinionToken';
 import ScanViewer from '../applications/ScanViewer';
+import TradingViewer from '../applications/TradingViewer';
 
 export interface DesktopProps {}
 
@@ -61,6 +62,12 @@ const APPLICATIONS: {
         name: 'r0x Scan',
         shortcutIcon: 'r0xScanIcon',
         component: ScanViewer,
+    },
+    trading: {
+        key: 'trading',
+        name: 'r0x Trading',
+        shortcutIcon: 'tradingIcon',
+        component: TradingViewer,
     },
     credits: {
         key: 'credits',
